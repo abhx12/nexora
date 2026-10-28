@@ -105,7 +105,7 @@ SmartSilk maintains strict separation between Developer environments and Custome
 
 ---
 
-## Developer Quickstart Guide
+## Setup
 
 ### Prerequisites
 - **JDK 21** (`java -version`)
@@ -169,9 +169,26 @@ docker exec -i postgres-nexora psql -U postgres -d nexora_db < scripts/reset-dev
 ```
 *Truncates all ledger transactions, customer orders, and inventory balances while safely preserving the owner account, permissions, and database schema.*
 
+## Run
+
+Start the backend (from `Nexora-backend/`):
+
+```bash
+./gradlew bootRun
+```
+
+- **API URL:** `http://localhost:8080`
+- **Health:** `http://localhost:8080/actuator/health`
+
+Start the desktop client (separate terminal):
+
+```bash
+cd nexora-desktop && ./gradlew run
+```
+
 ---
 
-## Testing
+## Test
 
 From `Nexora-backend/` (Docker must be running):
 
