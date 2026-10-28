@@ -106,4 +106,13 @@ class ServerSetupViewModelTest {
         testScheduler.advanceUntilIdle()
         assertEquals("Not a SmartSilk server.", vm.state.value.error)
     }
+
+    @Test
+    @DisplayName("findServerPackageDir detects smartsilk-server directory")
+    fun findServerPackageDir_detectsSmartsilkServer() {
+        val serverDir = com.nexora.desktop.util.LocalEngineManager.findServerPackageDir()
+        assertNotNull(serverDir)
+        assertTrue(serverDir!!.isDirectory)
+        assertTrue(java.io.File(serverDir, "docker-compose.yml").exists())
+    }
 }

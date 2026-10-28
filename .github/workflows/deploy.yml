@@ -16,11 +16,28 @@ jobs:
     concurrency: production-deploy
     steps:
       - uses: actions/checkout@v4
-      - name: Install SSH key
+      - name: Verify deployment configuration
         run: |
-          install -m 700 -d ~/.ssh
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
+          if [ -z "${{ secrets.DEPLOY_HOST }}" ] || [ -z "${{ secrets.DEPLOY_USER }}" ] || [ -z "${{ secrets.DEPLOY_SSH_KEY }}" ]; then
+            echo "::error::Missing required deployment secrets! DEPLOY_HOST, DEPLOY_USER, and DEPLOY_SSH_KEY must be set in GitHub Settings -> Environments -> production (or Actions Secrets)."
+            echo "Refer to docs/10-DEPLOYMENT.md (Section 6.2) and docs/RUNBOOK.md for server provisioning details."
+            exit 1
+          fi
+      - name: Install SSH key
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          mkdir -p -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          if ! ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null; then
+            echo "::error::Unable to reach SSH on DEPLOY_HOST ($DEPLOY_HOST). Please verify:"
+            echo "  1. DEPLOY_HOST is a public domain or public IP reachable from GitHub Actions (not localhost or a 192.168.x.x private LAN IP)."
+            echo "  2. Port 22 is open on your firewall / cloud security group."
+            echo "  3. The SSH daemon (sshd) is running on the target host."
+            exit 1
+          fi
       - name: Copy deploy files
         run: scp -r deploy/docker-compose.prod.yml deploy/Caddyfile deploy/postgres deploy/scripts "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/nexora/"
       - name: Run deploy script (backup, deploy, smoke test, automatic rollback)

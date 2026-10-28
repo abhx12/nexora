@@ -136,6 +136,9 @@ fun ServerSetupScreen(viewModel: ServerSetupViewModel, onContinue: () -> Unit) {
                 if (state.developmentWarning) {
                     Text(s("setup.developmentServer"), color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.bodySmall)
                 }
+                state.statusMessage?.let {
+                    Text(it, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
+                }
                 state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
                 state.serverVersion?.let {
                     Text(s("setup.serverVersion", it), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleSmall)

@@ -15,8 +15,19 @@ if errorlevel 1 (
 )
 
 if not exist .env (
-    echo Creating .env from .env.example...
+    echo Creating secure .env automatically...
     copy .env.example .env >nul
+    powershell -Command "$jwt = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 48 | ForEach-Object {[char]$_}); $db = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 32 | ForEach-Object {[char]$_}); (Get-Content .env) -replace 'JWT_SECRET=.*', ('JWT_SECRET=' + $jwt) -replace 'DB_PASSWORD=.*', ('DB_PASSWORD=' + $db) | Set-Content .env" >nul 2>&1
+    echo Secure environment initialized (JWT secret and DB password generated).
+)
+
+docker image inspect ghcr.io/nithiishsd/nexora-backend:latest >nul 2>&1
+if errorlevel 1 (
+    docker image inspect nexora:local >nul 2>&1
+    if not errorlevel 1 (
+        echo Found local image nexora:local. Tagging as ghcr.io/nithiishsd/nexora-backend:latest...
+        docker tag nexora:local ghcr.io/nithiishsd/nexora-backend:latest
+    )
 )
 
 echo Starting SmartSilk server engine containers...

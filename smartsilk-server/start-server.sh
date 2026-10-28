@@ -13,11 +13,24 @@ if ! command -v docker &> /dev/null; then
 fi
 
 if [ ! -f .env ]; then
-    echo "Creating .env from .env.example..."
+    echo "Creating secure .env automatically..."
     cp .env.example .env
-    RANDOM_KEY=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 48 || true)
-    if [ -n "$RANDOM_KEY" ]; then
-        sed -i "s/JWT_SECRET=.*/JWT_SECRET=$RANDOM_KEY/" .env
+    RANDOM_JWT=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 48 || true)
+    RANDOM_DB=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32 || true)
+    if [ -n "$RANDOM_JWT" ]; then
+        sed -i "s/JWT_SECRET=.*/JWT_SECRET=$RANDOM_JWT/" .env
+    fi
+    if [ -n "$RANDOM_DB" ]; then
+        sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=$RANDOM_DB/" .env
+    fi
+    chmod 600 .env 2>/dev/null || true
+    echo "Secure environment initialized (JWT secret & DB password generated)."
+fi
+
+if ! docker image inspect ghcr.io/nithiishsd/nexora-backend:latest >/dev/null 2>&1; then
+    if docker image inspect nexora:local >/dev/null 2>&1; then
+        echo "Found local image nexora:local. Tagging as ghcr.io/nithiishsd/nexora-backend:latest..."
+        docker tag nexora:local ghcr.io/nithiishsd/nexora-backend:latest
     fi
 fi
 

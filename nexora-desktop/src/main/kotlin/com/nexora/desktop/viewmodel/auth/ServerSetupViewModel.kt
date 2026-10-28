@@ -27,6 +27,7 @@ data class ServerSetupState(
     /** Banner shown for a `http://localhost` local or development server. */
     val developmentWarning: Boolean = false,
     val serverVersion: String? = null,
+    val statusMessage: String? = null,
     val error: String? = null,
     /** True only after a successful test with a matching API major version. */
     val canContinue: Boolean = false,
@@ -54,6 +55,7 @@ class ServerSetupViewModel(private val api: ApiClient, private val settings: Set
                     mode = ServerMode.LOCAL,
                     address = DEFAULT_LOCAL_URL,
                     addressError = null,
+                    statusMessage = null,
                     error = null,
                     canContinue = false,
                     serverVersion = null,
@@ -65,6 +67,7 @@ class ServerSetupViewModel(private val api: ApiClient, private val settings: Set
                     mode = ServerMode.REMOTE,
                     address = if (it.address == DEFAULT_LOCAL_URL) "" else it.address,
                     addressError = null,
+                    statusMessage = null,
                     error = null,
                     canContinue = false,
                     serverVersion = null,
@@ -75,7 +78,7 @@ class ServerSetupViewModel(private val api: ApiClient, private val settings: Set
 
     fun onAddressChange(text: String) {
         // Any edit invalidates a previous successful test.
-        _state.update { it.copy(address = text, addressError = null, error = null, canContinue = false, serverVersion = null) }
+        _state.update { it.copy(address = text, addressError = null, statusMessage = null, error = null, canContinue = false, serverVersion = null) }
     }
 
 
@@ -86,22 +89,28 @@ class ServerSetupViewModel(private val api: ApiClient, private val settings: Set
             _state.update { it.copy(addressError = problem) }
             return
         }
-        _state.update { it.copy(testing = true, error = null, developmentWarning = address.startsWith("http://")) }
+        _state.update { it.copy(testing = true, error = null, statusMessage = null, developmentWarning = address.startsWith("http://")) }
         viewModelScope.launch {
             val isConnectingToLocalEngine = address == DEFAULT_LOCAL_URL || address == "http://localhost:8088"
             if (isConnectingToLocalEngine && !com.nexora.desktop.util.LocalEngineManager.isEngineRunning()) {
-                val started = com.nexora.desktop.util.LocalEngineManager.ensureEngineStarted { msg ->
-                    _state.update { it.copy(error = msg) }
-                }
+                val started = com.nexora.desktop.util.LocalEngineManager.ensureEngineStarted(
+                    onProgress = { msg ->
+                        _state.update { it.copy(statusMessage = msg, error = null) }
+                    },
+                    onError = { err ->
+                        _state.update { it.copy(error = err, statusMessage = null) }
+                    }
+                )
                 if (!started) {
-                    _state.update { it.copy(testing = false) }
+                    _state.update { it.copy(testing = false, statusMessage = null) }
                     return@launch
                 }
             }
+            _state.update { it.copy(statusMessage = "Testing connection...") }
             val health = api.getFrom<JsonObject>(address, "/actuator/health")
             if (health is ApiResult.Failure) {
                 val message = if (health.error.isNetwork) s("setup.notReachable") else ErrorMessages.message(health.error)
-                _state.update { it.copy(testing = false, error = message) }
+                _state.update { it.copy(testing = false, error = message, statusMessage = null) }
                 return@launch
             }
             val info = api.getFrom<JsonObject>(address, "/actuator/info").getOrNull()
@@ -111,13 +120,14 @@ class ServerSetupViewModel(private val api: ApiClient, private val settings: Set
             val serverMajor = apiVersion?.content?.substringBefore('.')?.toIntOrNull()
             _state.update {
                 when {
-                    serverMajor == null -> it.copy(testing = false, error = s("setup.notSmartSilk"))
+                    serverMajor == null -> it.copy(testing = false, error = s("setup.notSmartSilk"), statusMessage = null)
                     serverMajor != ApiClient.API_MAJOR -> it.copy(
                         testing = false,
                         serverVersion = buildVersion,
                         error = s("setup.versionMismatch", ApiClient.API_MAJOR, serverMajor),
+                        statusMessage = null,
                     )
-                    else -> it.copy(testing = false, serverVersion = buildVersion ?: apiVersion.content, canContinue = true)
+                    else -> it.copy(testing = false, serverVersion = buildVersion ?: apiVersion.content, canContinue = true, statusMessage = null)
                 }
             }
         }

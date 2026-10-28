@@ -87,44 +87,91 @@ rm -rf ~/.config/smartsilk ~/.local/share/smartsilk
 
 ---
 
-## Setup (For Developers)
+---
 
-Needs: JDK 21, Docker with the compose plugin (the tests start PostgreSQL in containers), Git. The Gradle wrapper
-downloads everything else.
+## Environment Architecture: Developer vs. Customer
 
+SmartSilk maintains strict separation between Developer environments and Customer deployments:
+
+| Aspect | Developer Environment (`Nexora-backend/`) | Customer / Standalone Server (`smartsilk-server/`) |
+|:---|:---|:---|
+| **Intended User** | Software engineers, contributors, testers | Silk shop owners, weavers, billing counter staff |
+| **Server Port** | `8080` (Spring Boot dev runtime) | `8088` (Dedicated containerized engine) |
+| **PostgreSQL Port**| `5431` (Container: `postgres-nexora`) | Internal Docker network (Isolated volume) |
+| **Environment Config** | `Nexora-backend/.env` (Manual dev overrides) | Auto-generated `.env` with random secrets on first run |
+| **Customer Visibility**| Visible to developer (never committed to git) | **Zero-touch**: Customer never edits `.env` directly |
+| **Configuration Mode** | CLI / `.env` file | **In-App only**: Managed in Settings screen (`system_settings`) |
+| **Default Owner** | `owner` / `DevOwner#2026pass` | Created via Onboarding Wizard or auto-bootstrapped |
+
+---
+
+## Developer Quickstart Guide
+
+### Prerequisites
+- **JDK 21** (`java -version`)
+- **Docker** and **Docker Compose** plugin (`docker compose version`)
+- **Git**
+
+---
+
+### Step 1: Start Local Database (PostgreSQL 17)
+From repository root:
 ```bash
-git clone <repository url> && cd <repository>/Nexora-backend
-cp .env.example .env                 # local development values only; .env is never committed
-docker compose up -d                 # PostgreSQL 17 on localhost:5431
-./gradlew dependencies -q > /dev/null
+cd Nexora-backend
+cp -n .env.example .env    # Creates local dev .env if not present
+docker compose up -d        # Starts postgres-nexora on localhost:5431
+```
+Verify the database is healthy:
+```bash
+docker exec postgres-nexora pg_isready
 ```
 
-Every setting is an environment variable with a comment in `Nexora-backend/.env.example` (development) and
-`deploy/.env.prod.example` (production). The development profile is the default and has safe local values, so the
-server starts without setting anything.
+---
 
-## Run
-
-Server (from `Nexora-backend/`):
-
+### Step 2: Start the Backend Server
 ```bash
 ./gradlew bootRun
 ```
+- **API URL:** `http://localhost:8080`
+- **Swagger / OpenAPI Documentation:** `http://localhost:8080/swagger-ui.html`
+- **Health Endpoint:** `http://localhost:8080/actuator/health`
+- **Default Developer Login:**
+  - **Username:** `owner`
+  - **Password:** `DevOwner#2026pass`
 
-It migrates the database, creates the first owner account (`owner` / `DevOwner#2026pass` in development) and listens
-on `http://localhost:8080`. API documentation: `http://localhost:8080/swagger-ui.html`. Health:
-`curl http://localhost:8080/actuator/health`.
+---
 
-Desktop app (from `nexora-desktop/`):
-
+### Step 3: Launch the Desktop Application
+In a separate terminal:
 ```bash
+cd nexora-desktop
 ./gradlew run
 ```
+When prompted for server address, connect to `http://localhost:8080` and log in with the developer credentials above.
 
-On first start it asks for the server address: `http://localhost:8080` for development (shown with a warning), the
-`https://` address of the server otherwise.
+---
 
-## Test
+### Step 4: Seeding & Resetting Data for Development
+
+#### Option A: Seed Rich Sample Business Data
+To test orders, stock ledgers, financial reports, supplier dues, and transactions:
+```bash
+# Run from repository root
+docker exec -i postgres-nexora psql -U postgres -d nexora_db < scripts/seed-dev-data.sql
+```
+*Seeds 10 realistic parties (raw silk suppliers, warp yarn buyers, handloom weavers), opening silk yarn stock balances, 2 active customer orders, and financial accounts.*
+
+#### Option B: Reset to a Completely Clean Database
+To test fresh new-user onboarding, empty tutorial checklists, and first-time setups:
+```bash
+# Run from repository root
+docker exec -i postgres-nexora psql -U postgres -d nexora_db < scripts/reset-dev-data.sql
+```
+*Truncates all ledger transactions, customer orders, and inventory balances while safely preserving the owner account, permissions, and database schema.*
+
+---
+
+## Testing
 
 From `Nexora-backend/` (Docker must be running):
 
@@ -138,8 +185,11 @@ From `Nexora-backend/` (Docker must be running):
 | Performance suite (slow, separate) | `./gradlew test -Pperformance` |
 | Dependency audit (needs `NVD_API_KEY`) | `./gradlew dependencyCheckAnalyze` |
 
-From `nexora-desktop/`: `./gradlew check` (lint, type checks and tests). Each requirement in
-`docs/02-REQUIREMENTS.md` is proven by a test whose name contains its ID (`docs/08-TESTING.md`).
+From `nexora-desktop/`:
+```bash
+./gradlew check
+```
+Lint, type checks and Compose UI tests. Each requirement in `docs/02-REQUIREMENTS.md` is validated by tests matching its ID.
 
 ## Deploy
 

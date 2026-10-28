@@ -82,6 +82,8 @@ fun GettingStartedCard(
     val hasOrders = dashboardData.ordersByStatus.isNotEmpty()
     val hasTransactions = dashboardData.recentTransactions.isNotEmpty()
 
+    var step1Completed by remember { mutableStateOf(false) }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -158,8 +160,11 @@ fun GettingStartedCard(
                     title = s("guide.step1Title"),
                     desc = s("guide.step1Desc"),
                     actionText = s("guide.step1Action"),
-                    isCompleted = true, // System setting was set at onboarding
-                    onClick = { nav.open(NavSection.SETTINGS) },
+                    isCompleted = step1Completed,
+                    onClick = {
+                        step1Completed = true
+                        nav.open(NavSection.SETTINGS)
+                    },
                     modifier = Modifier.weight(1f),
                 )
 

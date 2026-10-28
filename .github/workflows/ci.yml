@@ -148,5 +148,7 @@ jobs:
       - name: Publish
         run: |
           docker tag "$IMAGE:${{ github.sha }}" "$IMAGE:main"
+          docker tag "$IMAGE:${{ github.sha }}" "$IMAGE:latest"
           docker push "$IMAGE:${{ github.sha }}" || echo "Warning: GitHub Actions token lacks package write permission. Enable 'Read and write permissions' in Repository Settings > Actions > General > Workflow permissions"
           docker push "$IMAGE:main" || true
+          docker push "$IMAGE:latest" || true
