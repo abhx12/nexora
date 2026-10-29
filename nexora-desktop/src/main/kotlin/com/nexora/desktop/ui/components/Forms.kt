@@ -163,7 +163,55 @@ fun ModalBox(onDismiss: () -> Unit, width: Dp = 480.dp, content: @Composable () 
     }
 }
 
-/** Plain text input with label, error under it and optional max length. */
+/**
+ * Accepts only valid mobile/phone inputs:
+ * - Digits only, maximum 10 digits for local mobile numbers (e.g. 9840123456).
+ * - Or leading '+' followed by country code and digits, maximum 13 chars (e.g. +919840123456).
+ * Returns the sanitized string, or null if invalid (rejecting the keystroke).
+ */
+fun acceptPhoneInput(typed: String): String? {
+    val trimmed = typed.trim()
+    if (trimmed.isEmpty()) return ""
+    if (trimmed.startsWith("+")) {
+        val digits = trimmed.substring(1)
+        if (!digits.all { it.isDigit() } || digits.length > 12) return null
+        return "+$digits"
+    }
+    if (!trimmed.all { it.isDigit() } || trimmed.length > 10) return null
+    return trimmed
+}
+
+/**
+ * Accepts only valid Indian PIN code inputs: strictly digits only, max 6 digits.
+ */
+fun acceptPincodeInput(typed: String): String? {
+    val trimmed = typed.trim()
+    if (trimmed.isEmpty()) return ""
+    if (!trimmed.all { it.isDigit() } || trimmed.length > 6) return null
+    return trimmed
+}
+
+/**
+ * Accepts only valid GSTIN inputs: uppercase alphanumeric only, max 15 characters.
+ */
+fun acceptGstinInput(typed: String): String? {
+    val trimmed = typed.trim().uppercase()
+    if (trimmed.isEmpty()) return ""
+    if (!trimmed.all { it.isLetterOrDigit() } || trimmed.length > 15) return null
+    return trimmed
+}
+
+/**
+ * Accepts only digits with an explicit maximum length.
+ */
+fun acceptDigitsInput(typed: String, maxDigits: Int): String? {
+    val trimmed = typed.trim()
+    if (trimmed.isEmpty()) return ""
+    if (!trimmed.all { it.isDigit() } || trimmed.length > maxDigits) return null
+    return trimmed
+}
+
+/** Plain text input with label, error under it, optional max length and keystroke filter. */
 @Composable
 fun TextInput(
     label: String,
@@ -175,10 +223,14 @@ fun TextInput(
     maxLength: Int = 1000,
     enabled: Boolean = true,
     tag: String? = null,
+    filter: ((String) -> String?)? = null,
 ) {
     OutlinedTextField(
         value = value,
-        onValueChange = { onValueChange(it.take(maxLength)) },
+        onValueChange = { typed ->
+            val text = if (filter != null) filter(typed) else typed.take(maxLength)
+            if (text != null) onValueChange(text.take(maxLength))
+        },
         label = { Text(label) },
         isError = error != null,
         supportingText = error?.let { { FieldError(it) } },
@@ -188,6 +240,75 @@ fun TextInput(
         modifier = modifier.fillMaxWidth().let { if (tag != null) it.testTag(tag) else it },
     )
 }
+
+/** Specialized phone/mobile number field: max 10 digits (or 13 with +country code), digits only. */
+@Composable
+fun PhoneInputField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    error: String? = null,
+    enabled: Boolean = true,
+    tag: String? = null,
+) = TextInput(
+    label = label,
+    value = value,
+    onValueChange = onValueChange,
+    modifier = modifier,
+    error = error,
+    singleLine = true,
+    maxLength = 13,
+    enabled = enabled,
+    tag = tag,
+    filter = ::acceptPhoneInput,
+)
+
+/** Specialized 6-digit Indian PIN code field: strictly digits only, max 6 chars. */
+@Composable
+fun PincodeInputField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    error: String? = null,
+    enabled: Boolean = true,
+    tag: String? = null,
+) = TextInput(
+    label = label,
+    value = value,
+    onValueChange = onValueChange,
+    modifier = modifier,
+    error = error,
+    singleLine = true,
+    maxLength = 6,
+    enabled = enabled,
+    tag = tag,
+    filter = ::acceptPincodeInput,
+)
+
+/** Specialized 15-character GSTIN field: uppercase alphanumeric only, max 15 chars. */
+@Composable
+fun GstinInputField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    error: String? = null,
+    enabled: Boolean = true,
+    tag: String? = null,
+) = TextInput(
+    label = label,
+    value = value,
+    onValueChange = onValueChange,
+    modifier = modifier,
+    error = error,
+    singleLine = true,
+    maxLength = 15,
+    enabled = enabled,
+    tag = tag,
+    filter = ::acceptGstinInput,
+)
 
 /** Segmented choice (Credit / Cash, Rolling / Warping ...) as chips; each chip is a Tab stop. */
 @Composable

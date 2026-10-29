@@ -5,6 +5,7 @@ import java.sql.SQLException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -62,7 +63,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         ProblemDetail pd = build(ex.getCode(), ex.getMessage(), request.getRequestURI());
         if (ex instanceof FieldValidationException fve) {
             // same errors[] shape as a Bean Validation failure, so the client handles both alike
-            pd.setProperty("errors", List.of(Map.of("field", fve.getField(), "message", fve.getMessage())));
+            Map<String, Object> err = new LinkedHashMap<>();
+            err.put("field", fve.getField());
+            err.put("message", fve.getMessage());
+            if (fve.getRejectedValue() != null) {
+                err.put("rejectedValue", String.valueOf(fve.getRejectedValue()));
+            }
+            pd.setProperty("errors", List.of(err));
         }
         return pd;
     }
@@ -153,10 +160,17 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex,
                                                                   HttpHeaders headers, HttpStatusCode status,
                                                                   WebRequest request) {
-        List<Map<String, String>> errors = new ArrayList<>();
+        List<Map<String, Object>> errors = new ArrayList<>();
         for (ObjectError error : ex.getBindingResult().getAllErrors()) {
             String field = error instanceof FieldError fe ? fe.getField() : error.getObjectName();
-            errors.add(Map.of("field", field, "message", String.valueOf(error.getDefaultMessage())));
+            Object rejected = error instanceof FieldError fe ? fe.getRejectedValue() : null;
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("field", field);
+            map.put("message", String.valueOf(error.getDefaultMessage()));
+            if (rejected != null) {
+                map.put("rejectedValue", String.valueOf(rejected));
+            }
+            errors.add(map);
         }
         return validationFailed(ex, errors, headers, request);
     }
@@ -167,12 +181,19 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                                                                             HttpHeaders headers,
                                                                             HttpStatusCode status,
                                                                             WebRequest request) {
-        List<Map<String, String>> errors = new ArrayList<>();
+        List<Map<String, Object>> errors = new ArrayList<>();
         ex.getParameterValidationResults().forEach(result -> {
             String name = result.getMethodParameter().getParameterName();
-            result.getResolvableErrors().forEach(error -> errors.add(Map.of(
-                    "field", name == null ? "parameter" : name,
-                    "message", String.valueOf(error.getDefaultMessage()))));
+            Object arg = result.getArgument();
+            result.getResolvableErrors().forEach(error -> {
+                Map<String, Object> map = new LinkedHashMap<>();
+                map.put("field", name == null ? "parameter" : name);
+                map.put("message", String.valueOf(error.getDefaultMessage()));
+                if (arg != null) {
+                    map.put("rejectedValue", String.valueOf(arg));
+                }
+                errors.add(map);
+            });
         });
         return validationFailed(ex, errors, headers, request);
     }
@@ -183,8 +204,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     protected ResponseEntity<Object> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException ex,
                                                                           HttpHeaders headers, HttpStatusCode status,
                                                                           WebRequest request) {
-        return validationFailed(ex, List.of(Map.of("field", "file", "message", "A document can be at most 10 MB.")),
-                headers, request);
+        Map<String, Object> err = Map.of("field", "file", "message", "A document can be at most 10 MB.");
+        return validationFailed(ex, List.of(err), headers, request);
     }
 
     // Every other MVC exception (404, 405, 415, unreadable JSON ...) is built by the parent class;
@@ -206,7 +227,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     // ---- helpers ---------------------------------------------------------------------------
 
-    private ResponseEntity<Object> validationFailed(Exception ex, List<Map<String, String>> errors,
+    private ResponseEntity<Object> validationFailed(Exception ex, List<Map<String, Object>> errors,
                                                     HttpHeaders headers, WebRequest request) {
         ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Request validation failed.");
         pd.setProperty("code", ErrorCode.VALIDATION_FAILED.name());

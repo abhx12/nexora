@@ -15,7 +15,7 @@ BEGIN
       production_batches, production_order_items,
       outsourcing_jobs, outsourcing_order_items, manufacturer_payment_allocations,
       work_records, worker_payment_allocations, notifications, documents,
-      business_number_sequences, refresh_tokens CASCADE;
+      business_number_sequences, refresh_tokens, inventory_thresholds CASCADE;
 
     -- Reset sequence counters if sequences exist
     ALTER SEQUENCE IF EXISTS business_number_seq RESTART WITH 1;

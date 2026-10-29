@@ -1,11 +1,20 @@
 package com.nexora.desktop.ui.components
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -16,7 +25,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isAltPressed
@@ -26,6 +37,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nexora.desktop.util.Dates
 import com.nexora.desktop.util.s
@@ -90,22 +102,89 @@ fun DateField(
 @Composable
 private fun MonthCalendar(initial: LocalDate, onPick: (LocalDate) -> Unit) {
     var month by remember { mutableStateOf(YearMonth.from(initial)) }
-    Column(Modifier.padding(8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = { month = month.minusMonths(1) }) { Text(s("date.previousMonth")) }
-            Text(s("date.monthTitle", s("month.${month.monthValue}"), month.year))
-            TextButton(onClick = { month = month.plusMonths(1) }) { Text(s("date.nextMonth")) }
+    Column(Modifier.padding(12.dp).width(280.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(
+                onClick = { month = month.minusMonths(1) },
+                modifier = Modifier.size(32.dp).semantics { contentDescription = s("date.previousMonth") }
+            ) {
+                Text(s("date.previousMonth"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            }
+            Text(
+                s("date.monthTitle", s("month.${month.monthValue}"), month.year.toString()),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            IconButton(
+                onClick = { month = month.plusMonths(1) },
+                modifier = Modifier.size(32.dp).semantics { contentDescription = s("date.nextMonth") }
+            ) {
+                Text(s("date.nextMonth"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            }
         }
+
+        // Days of week header (Mo, Tu, We, Th, Fr, Sa, Su)
+        val dayHeaders = listOf("Mo", "Tu", "We", "Th", "Fr", "Sa", "Su")
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            dayHeaders.forEach { header ->
+                Box(modifier = Modifier.size(36.dp), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = header,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+
         // Weeks start on Monday; blank cells before the 1st.
         val leading = month.atDay(1).dayOfWeek.value - 1
         val cells = List(leading) { null } + (1..month.lengthOfMonth()).map { month.atDay(it) }
         cells.chunked(7).forEach { week ->
-            Row {
-                week.forEach { day ->
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                val paddedWeek = if (week.size < 7) week + List(7 - week.size) { null } else week
+                paddedWeek.forEach { day ->
                     if (day == null) {
-                        Text("", Modifier.size(40.dp))
+                        Spacer(Modifier.size(36.dp))
                     } else {
-                        TextButton(onClick = { onPick(day) }, modifier = Modifier.size(40.dp)) { Text(day.dayOfMonth.toString()) }
+                        val isSelected = day == initial
+                        val isToday = day == LocalDate.now()
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    when {
+                                        isSelected -> MaterialTheme.colorScheme.primary
+                                        isToday -> MaterialTheme.colorScheme.primaryContainer
+                                        else -> Color.Transparent
+                                    }
+                                )
+                                .clickable { onPick(day) },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = day.dayOfMonth.toString(),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal,
+                                color = when {
+                                    isSelected -> MaterialTheme.colorScheme.onPrimary
+                                    isToday -> MaterialTheme.colorScheme.onPrimaryContainer
+                                    else -> MaterialTheme.colorScheme.onSurface
+                                },
+                            )
+                        }
                     }
                 }
             }

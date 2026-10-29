@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.dp
 import com.nexora.desktop.ui.components.FieldError
 import com.nexora.desktop.ui.components.FormPanel
 import com.nexora.desktop.ui.components.MoneyField
+import com.nexora.desktop.ui.components.PhoneInputField
+import com.nexora.desktop.ui.components.PincodeInputField
 import com.nexora.desktop.ui.components.TextInput
 import com.nexora.desktop.ui.components.enumLabel
 import com.nexora.desktop.ui.components.screenViewModel
@@ -72,9 +74,12 @@ fun PartyFormPanel(nav: NavigationViewModel, partyId: String?) {
         Text(s("party.phones"), style = MaterialTheme.typography.labelLarge)
         form.phones.forEachIndexed { index, phone ->
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextInput(
-                    s("party.phoneNumber"), phone.number, { v -> vm.updatePhone(index) { it.copy(number = v) } },
-                    Modifier.width(200.dp), errors["phones[$index].phoneNumber"], maxLength = 30,
+                PhoneInputField(
+                    label = s("party.phoneNumber"),
+                    value = phone.number,
+                    onValueChange = { v -> vm.updatePhone(index) { it.copy(number = v) } },
+                    modifier = Modifier.width(200.dp),
+                    error = errors["phones[$index].phoneNumber"],
                 )
                 TextInput(
                     s("party.phoneLabel"), phone.label, { v -> vm.updatePhone(index) { it.copy(label = v) } },
@@ -95,7 +100,12 @@ fun PartyFormPanel(nav: NavigationViewModel, partyId: String?) {
         TextInput(s("party.city"), form.city, { v -> vm.edit { it.copy(city = v) } }, error = errors["city"], maxLength = 100)
         TextInput(s("party.district"), form.district, { v -> vm.edit { it.copy(district = v) } }, error = errors["district"], maxLength = 100)
         TextInput(s("party.state"), form.state, { v -> vm.edit { it.copy(state = v) } }, error = errors["state"], maxLength = 50)
-        TextInput(s("party.pincode"), form.pincode, { v -> vm.edit { it.copy(pincode = v) } }, error = errors["pincode"], maxLength = 20)
+        PincodeInputField(
+            label = s("party.pincode"),
+            value = form.pincode,
+            onValueChange = { v -> vm.edit { it.copy(pincode = v) } },
+            error = errors["pincode"],
+        )
         if ("SUPPLIER" in form.roles) {
             TextInput(
                 s("party.creditDays"), form.creditDays, { v -> vm.edit { it.copy(creditDays = v.filter(Char::isDigit)) } },

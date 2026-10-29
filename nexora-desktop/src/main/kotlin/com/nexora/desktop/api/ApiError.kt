@@ -43,4 +43,8 @@ internal data class ProblemDetail(
 )
 
 @Serializable
-internal data class FieldErrorDto(val field: String, val message: String)
+internal data class FieldErrorDto(
+    val field: String,
+    val message: String,
+    val rejectedValue: String? = null,
+)

@@ -17,13 +17,15 @@ object Checks {
 
     /** `Money+` / `Kg+`: present and greater than zero. */
     fun positive(text: String): String? {
-        val value = text.toDecimalOrNull() ?: return s("validation.required")
+        if (text.isBlank()) return s("validation.required")
+        val value = text.toDecimalOrNull() ?: return "Invalid numeric format (entered: '$text')."
         return if (value.signum() <= 0) s("validation.positive") else null
     }
 
     /** `Money0` / `Kg0`: present and zero or more. */
     fun zeroOrMore(text: String): String? {
-        val value = text.toDecimalOrNull() ?: return s("validation.required")
+        if (text.isBlank()) return s("validation.required")
+        val value = text.toDecimalOrNull() ?: return "Invalid numeric format (entered: '$text')."
         return if (value.signum() < 0) s("validation.positive") else null
     }
 
@@ -39,6 +41,35 @@ object Checks {
         if (notAfterToday && date.isAfter(Dates.today(clock))) return s("validation.notFuture")
         if (notBefore != null && date.isBefore(notBefore)) return s("validation.notBefore", Dates.format(notBefore))
         return null
+    }
+
+    /** Validates an Indian mobile number (strictly 10 digits, or 10-12 digits with +). */
+    fun phone(text: String, required: Boolean = false): String? {
+        if (text.isBlank()) return if (required) s("validation.required") else null
+        val trimmed = text.trim()
+        val isValid = if (trimmed.startsWith("+")) {
+            val rest = trimmed.substring(1)
+            rest.all { it.isDigit() } && rest.length in 10..12
+        } else {
+            trimmed.all { it.isDigit() } && trimmed.length == 10
+        }
+        return if (!isValid) "Enter a valid 10-digit mobile number (e.g. 9840123456). Entered: '$text'." else null
+    }
+
+    /** Validates an Indian 6-digit postal PIN code. */
+    fun pincode(text: String, required: Boolean = false): String? {
+        if (text.isBlank()) return if (required) s("validation.required") else null
+        val trimmed = text.trim()
+        val isValid = trimmed.length == 6 && trimmed.all { it.isDigit() }
+        return if (!isValid) "Enter a valid 6-digit postal PIN code (e.g. 631501). Entered: '$text'." else null
+    }
+
+    /** Validates a 15-character Indian GSTIN. */
+    fun gstin(text: String, required: Boolean = false): String? {
+        if (text.isBlank()) return if (required) s("validation.required") else null
+        val trimmed = text.trim()
+        val isValid = trimmed.length == 15 && trimmed.all { it.isLetterOrDigit() }
+        return if (!isValid) "Enter a valid 15-character GSTIN (e.g. 33AAAAA0000A1Z5). Entered: '$text'." else null
     }
 
     /** Collects the non-null problems into the field-name -> message map used by the forms. */

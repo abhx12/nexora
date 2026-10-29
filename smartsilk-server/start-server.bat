@@ -18,6 +18,7 @@ if not exist .env (
     echo Creating secure .env automatically...
     copy .env.example .env >nul
     powershell -Command "$jwt = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 48 | ForEach-Object {[char]$_}); $db = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 32 | ForEach-Object {[char]$_}); (Get-Content .env) -replace 'JWT_SECRET=.*', ('JWT_SECRET=' + $jwt) -replace 'DB_PASSWORD=.*', ('DB_PASSWORD=' + $db) | Set-Content .env" >nul 2>&1
+    attrib +h .env >nul 2>&1
     echo Secure environment initialized (JWT secret and DB password generated).
 )
 

@@ -5,13 +5,23 @@ package com.nexora.shared.error;
 public class FieldValidationException extends BusinessException {
 
     private final String field;
+    private final Object rejectedValue;
 
     public FieldValidationException(String field, String message) {
+        this(field, message, null);
+    }
+
+    public FieldValidationException(String field, String message, Object rejectedValue) {
         super(ErrorCode.VALIDATION_FAILED, message);
         this.field = field;
+        this.rejectedValue = rejectedValue;
     }
 
     public String getField() {
         return field;
+    }
+
+    public Object getRejectedValue() {
+        return rejectedValue;
     }
 }

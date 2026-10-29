@@ -210,8 +210,14 @@ class ApiClient(
             status = status,
             code = parsed?.code ?: fallbackCode,
             detail = parsed?.detail,
-            // A field can have several messages; they are shown together under the field.
-            fieldErrors = parsed?.errors.orEmpty().groupBy({ it.field }, { it.message }).mapValues { it.value.joinToString("; ") },
+            // A field can have several messages; they are shown together under the field with entered value if present
+            fieldErrors = parsed?.errors.orEmpty().groupBy({ it.field }, { err ->
+                if (!err.rejectedValue.isNullOrBlank()) {
+                    "${err.message} (entered: \"${err.rejectedValue}\")"
+                } else {
+                    err.message
+                }
+            }).mapValues { it.value.joinToString("; ") },
         )
     }
 

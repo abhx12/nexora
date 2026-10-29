@@ -48,7 +48,7 @@ BEGIN
       production_batches, production_order_items,
       outsourcing_jobs, outsourcing_order_items, manufacturer_payment_allocations,
       work_records, worker_payment_allocations, notifications, documents,
-      business_number_sequences, refresh_tokens CASCADE;
+      business_number_sequences, refresh_tokens, inventory_thresholds CASCADE;
 
     -- 3. Insert Parties
     INSERT INTO parties (id, party_code, name, address_line, area, city, district, state, pincode, status, default_credit_days, customer_credit_days, created_at, updated_at, created_by, version) VALUES
@@ -106,6 +106,17 @@ BEGIN
     (gen_random_uuid(), 'SILK_WARP', 'FINISHED_STOCK', 32.000, NOW(), NOW(), v_owner_id, 0),
     (gen_random_uuid(), 'KORA_WARP', 'FINISHED_STOCK', 18.000, NOW(), NOW(), v_owner_id, 0),
     (gen_random_uuid(), 'SILK_WARP', 'INTERNAL_WIP', 15.000, NOW(), NOW(), v_owner_id, 0);
+
+    -- 8b. Inventory Thresholds (Minimum stock safety levels in kg)
+    INSERT INTO inventory_thresholds (id, product_type, location, min_threshold_kg, created_at, updated_at, created_by, version) VALUES
+    (gen_random_uuid(), 'RAW_SILK', 'RAW_STOCK', 50.000, NOW(), NOW(), v_owner_id, 0),
+    (gen_random_uuid(), 'VUDA_WARP', 'RAW_STOCK', 20.000, NOW(), NOW(), v_owner_id, 0),
+    (gen_random_uuid(), 'SILK_WARP', 'INTERNAL_WIP', 30.000, NOW(), NOW(), v_owner_id, 0),
+    (gen_random_uuid(), 'KORA_WARP', 'INTERNAL_WIP', 20.000, NOW(), NOW(), v_owner_id, 0),
+    (gen_random_uuid(), 'SILK_WARP', 'EXTERNAL_WIP', 20.000, NOW(), NOW(), v_owner_id, 0),
+    (gen_random_uuid(), 'KORA_WARP', 'EXTERNAL_WIP', 10.000, NOW(), NOW(), v_owner_id, 0),
+    (gen_random_uuid(), 'SILK_WARP', 'FINISHED_STOCK', 25.000, NOW(), NOW(), v_owner_id, 0),
+    (gen_random_uuid(), 'KORA_WARP', 'FINISHED_STOCK', 15.000, NOW(), NOW(), v_owner_id, 0);
 
     -- 9. Purchase record
     INSERT INTO purchases (id, purchase_number, supplier_id, product_type, purchase_date, ordered_weight_kg, rate_per_kg, payment_type, credit_days, due_date, bill_reference, status, notes, created_at, updated_at, created_by, version) VALUES

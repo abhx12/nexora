@@ -87,14 +87,28 @@ class PartyFormViewModel(private val repository: PartyRepository, private val pa
         if (form.roles.isEmpty()) errors["roles"] = s("party.chooseRole")
         form.phones.forEachIndexed { i, phone ->
             if (phone.number.isBlank()) return@forEachIndexed // a row without a number is ignored (not sent)
-            if (!PHONE.matches(phone.number)) errors["phones[$i].phoneNumber"] = s("party.phoneInvalid")
+            if (!PHONE.matches(phone.number)) {
+                errors["phones[$i].phoneNumber"] = "${s("party.phoneInvalid")} (entered: '${phone.number}')."
+            }
             if (phone.label.isBlank()) errors["phones[$i].label"] = s("validation.required")
         }
-        if ("SUPPLIER" in form.roles && form.creditDays.isNotBlank() && (form.creditDays.toIntOrNull() ?: -1) !in 0..365) {
-            errors["defaultCreditDays"] = s("validation.range", 0, 365)
+        if (form.pincode.isNotBlank()) {
+            val pin = form.pincode.trim()
+            if (pin.length != 6 || !pin.all { it.isDigit() }) {
+                errors["pincode"] = "Enter a valid 6-digit postal PIN code (entered: '${form.pincode}')."
+            }
         }
-        if ("CUSTOMER" in form.roles && form.customerCreditDays.isNotBlank() && (form.customerCreditDays.toIntOrNull() ?: -1) !in 0..365) {
-            errors["customerCreditDays"] = s("validation.range", 0, 365)
+        if ("SUPPLIER" in form.roles && form.creditDays.isNotBlank()) {
+            val days = form.creditDays.toIntOrNull()
+            if (days == null || days !in 0..365) {
+                errors["defaultCreditDays"] = "Enter credit days between 0 and 365 (entered: '${form.creditDays}')."
+            }
+        }
+        if ("CUSTOMER" in form.roles && form.customerCreditDays.isNotBlank()) {
+            val days = form.customerCreditDays.toIntOrNull()
+            if (days == null || days !in 0..365) {
+                errors["customerCreditDays"] = "Enter credit days between 0 and 365 (entered: '${form.customerCreditDays}')."
+            }
         }
         return errors
     }
