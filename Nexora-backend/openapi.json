@@ -176,6 +176,37 @@
         "required" : [ "role" ],
         "type" : "object"
       },
+      "AdvisoryInsight" : {
+        "properties" : {
+          "actionableStepEn" : {
+            "type" : "string"
+          },
+          "actionableStepTa" : {
+            "type" : "string"
+          },
+          "detailEn" : {
+            "type" : "string"
+          },
+          "detailTa" : {
+            "type" : "string"
+          },
+          "severity" : {
+            "enum" : [ "SUCCESS", "INFO", "WARNING", "CRITICAL" ],
+            "type" : "string"
+          },
+          "titleEn" : {
+            "type" : "string"
+          },
+          "titleTa" : {
+            "type" : "string"
+          },
+          "type" : {
+            "enum" : [ "LIQUIDITY", "RECEIVABLES", "INVENTORY", "PROFITABILITY" ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "Ageing" : {
         "properties" : {
           "days0to30" : {
@@ -189,6 +220,32 @@
           },
           "over90" : {
             "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "AiAdvisoryResponse" : {
+        "properties" : {
+          "cashRunwayDays" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "healthStatus" : {
+            "enum" : [ "HEALTHY", "ATTENTION_NEEDED", "CRITICAL" ],
+            "type" : "string"
+          },
+          "insights" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AdvisoryInsight"
+            },
+            "type" : "array"
+          },
+          "liquidityCoverageRatio" : {
+            "type" : "number"
+          },
+          "silkRunwayDays" : {
+            "format" : "int32",
+            "type" : "integer"
           }
         },
         "type" : "object"
@@ -481,6 +538,22 @@
             "type" : "number"
           }
         },
+        "type" : "object"
+      },
+      "ChangePasswordRequest" : {
+        "properties" : {
+          "currentPassword" : {
+            "maxLength" : 128,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "newPassword" : {
+            "maxLength" : 72,
+            "minLength" : 12,
+            "type" : "string"
+          }
+        },
+        "required" : [ "currentPassword", "newPassword" ],
         "type" : "object"
       },
       "ChequeActionRequest" : {
@@ -1081,6 +1154,32 @@
           }
         },
         "required" : [ "orderedWeightKg", "paymentType", "purchaseDate", "ratePerKg", "supplierId" ],
+        "type" : "object"
+      },
+      "CreateUserRequest" : {
+        "properties" : {
+          "displayName" : {
+            "maxLength" : 200,
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "password" : {
+            "maxLength" : 72,
+            "minLength" : 12,
+            "type" : "string"
+          },
+          "role" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "username" : {
+            "maxLength" : 50,
+            "minLength" : 3,
+            "pattern" : "^[a-zA-Z0-9_.-]+$",
+            "type" : "string"
+          }
+        },
+        "required" : [ "displayName", "password", "role", "username" ],
         "type" : "object"
       },
       "CustomerOutstandingReport" : {
@@ -5037,6 +5136,25 @@
         },
         "type" : "object"
       },
+      "TextParseRequest" : {
+        "properties" : {
+          "text" : {
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "text" ],
+        "type" : "object"
+      },
+      "ToggleUserStatusRequest" : {
+        "properties" : {
+          "active" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "active" ],
+        "type" : "object"
+      },
       "TokenResponse" : {
         "properties" : {
           "accessToken" : {
@@ -5387,6 +5505,38 @@
         "required" : [ "settings" ],
         "type" : "object"
       },
+      "UserResponse" : {
+        "properties" : {
+          "active" : {
+            "type" : "boolean"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "lastLoginAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "roles" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "username" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "Wastage" : {
         "properties" : {
           "productType" : {
@@ -5655,6 +5805,27 @@
               }
             },
             "description" : "OK"
+          }
+        },
+        "tags" : [ "auth-controller" ]
+      }
+    },
+    "/api/v1/auth/password" : {
+      "post" : {
+        "operationId" : "changePassword",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
           }
         },
         "tags" : [ "auth-controller" ]
@@ -6065,6 +6236,24 @@
         "tags" : [ "customer-report-controller" ]
       }
     },
+    "/api/v1/dashboard/ai-advisory" : {
+      "get" : {
+        "operationId" : "advisory",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AiAdvisoryResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "dashboard-controller" ]
+      }
+    },
     "/api/v1/dashboard/summary" : {
       "get" : {
         "operationId" : "summary_2",
@@ -6222,6 +6411,34 @@
             "application/json" : {
               "schema" : {
                 "$ref" : "#/components/schemas/DocumentOcrRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OcrExtractionResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "document-controller" ]
+      }
+    },
+    "/api/v1/documents/parse-text" : {
+      "post" : {
+        "operationId" : "parseText",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TextParseRequest"
               }
             }
           },
@@ -10682,6 +10899,90 @@
           }
         },
         "tags" : [ "supplier-payable-controller" ]
+      }
+    },
+    "/api/v1/users" : {
+      "get" : {
+        "operationId" : "listUsers",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/UserResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "user-controller" ]
+      },
+      "post" : {
+        "operationId" : "createUser",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateUserRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserResponse"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "user-controller" ]
+      }
+    },
+    "/api/v1/users/{id}/status" : {
+      "patch" : {
+        "operationId" : "setUserStatus",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ToggleUserStatusRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "user-controller" ]
       }
     },
     "/api/v1/work-records" : {

@@ -19,6 +19,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -58,12 +59,17 @@ import kotlinx.coroutines.delay
 fun DashboardScreen(nav: NavigationViewModel, reloadTick: Int) {
     val vm: DashboardViewModel = screenViewModel()
     val data by vm.data.collectAsState()
-    ReloadOn(reloadTick, vm::reload)
+    val advisory by vm.advisory.collectAsState()
+    ReloadOn(reloadTick) {
+        vm.reload()
+        vm.loadAdvisory()
+    }
     // Auto refresh every 5 minutes while this screen is shown; leaving the screen cancels the loop.
     LaunchedEffect(Unit) {
         while (true) {
-            delay(DashboardViewModel.REFRESH_MILLIS)
-            vm.reload()
+             delay(DashboardViewModel.REFRESH_MILLIS)
+             vm.reload()
+             vm.loadAdvisory()
         }
     }
     Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -73,7 +79,90 @@ fun DashboardScreen(nav: NavigationViewModel, reloadTick: Int) {
         LoadBanner(data.error, data.lastUpdated, vm::reload)
         data.value?.let { d ->
             GettingStartedCard(d, nav)
+            AiAdvisoryCard(advisory)
             DashboardBands(d, nav)
+        }
+    }
+}
+
+@Composable
+private fun AiAdvisoryCard(advisory: com.nexora.desktop.api.dto.AiAdvisoryResponse?) {
+    if (advisory == null || advisory.insights.isEmpty()) return
+    val isTa = com.nexora.desktop.util.Strings.currentLocale() == "ta"
+
+    val statusColor = when (advisory.healthStatus) {
+        "HEALTHY" -> MaterialTheme.colorScheme.primary
+        "ATTENTION_NEEDED" -> AppColors.slow
+        else -> MaterialTheme.colorScheme.error
+    }
+    val statusLabel = when (advisory.healthStatus) {
+        "HEALTHY" -> s("ai.advisory.healthy")
+        "ATTENTION_NEEDED" -> s("ai.advisory.attention")
+        else -> s("ai.advisory.critical")
+    }
+
+    DashboardBox(
+        title = s("ai.advisory.title"),
+        action = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                advisory.liquidityCoverageRatio?.let {
+                    FlagChip("${s("ai.advisory.liquidity")}: ${it}x")
+                }
+                advisory.silkRunwayDays?.let {
+                    FlagChip("${s("ai.advisory.silkRunway")}: $it d")
+                }
+                Surface(
+                    color = statusColor.copy(alpha = 0.15f),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, statusColor.copy(alpha = 0.4f)),
+                ) {
+                    Text(
+                        statusLabel,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = statusColor,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    )
+                }
+            }
+        },
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            advisory.insights.forEach { ins ->
+                val title = if (isTa && ins.titleTa.isNotBlank()) ins.titleTa else ins.titleEn
+                val detail = if (isTa && ins.detailTa.isNotBlank()) ins.detailTa else ins.detailEn
+                val action = if (isTa && ins.actionableStepTa.isNotBlank()) ins.actionableStepTa else ins.actionableStepEn
+
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(Modifier.padding(10.dp), verticalAlignment = Alignment.Top) {
+                        Text(
+                            when (ins.severity) {
+                                "SUCCESS" -> "🟢"
+                                "WARNING" -> "🟡"
+                                "CRITICAL" -> "🔴"
+                                else -> "ℹ️"
+                            },
+                            modifier = Modifier.padding(end = 10.dp, top = 2.dp),
+                        )
+                        Column(Modifier.weight(1f)) {
+                            Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                            Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (action.isNotBlank()) {
+                                Text(
+                                    "👉 $action",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(top = 4.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

@@ -80,12 +80,17 @@ data class DocumentShareRequest(
 )
 
 @Serializable
+data class TextParseRequest(
+    val text: String,
+)
+
+@Serializable
 data class DocumentOcrRequest(
     val documentId: String,
 )
 
 @Serializable
 data class OcrExtractionResponse(
-    val documentId: String,
+    val documentId: String? = null,
     val suggested: Map<String, kotlinx.serialization.json.JsonElement> = emptyMap(),
 )

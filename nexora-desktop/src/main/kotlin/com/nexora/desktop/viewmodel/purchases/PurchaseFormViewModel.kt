@@ -5,6 +5,7 @@ import com.nexora.desktop.api.dto.LowStockItemDto
 import com.nexora.desktop.api.dto.NewPurchaseRequest
 import com.nexora.desktop.api.dto.PurchaseResponse
 import com.nexora.desktop.repository.ApiResult
+import com.nexora.desktop.repository.DocumentRepository
 import com.nexora.desktop.repository.InventoryRepository
 import com.nexora.desktop.repository.PartyRepository
 import com.nexora.desktop.repository.PurchaseRepository
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.jsonPrimitive
 import java.time.Clock
 
 data class PurchaseForm(
@@ -33,18 +35,27 @@ data class PurchaseForm(
 )
 
 /**
- * S-PUR-02 New purchase (FR-PROC-01, -04, -17). Value and due date are NOT computed here: the form says
- * "calculated on save" and the server's figures appear in the purchase detail after saving.
+ * S-PUR-02 New purchase (FR-PROC-01, -04, -17) with Post-MVP AI Smart Fill assistance.
  */
 class PurchaseFormViewModel(
     private val purchases: PurchaseRepository,
     private val parties: PartyRepository,
     private val clock: Clock,
     private val inventory: InventoryRepository? = null,
+    private val documents: DocumentRepository? = null,
 ) : FormViewModel<PurchaseForm, PurchaseResponse>(PurchaseForm(purchaseDate = Dates.format(Dates.today(clock)))) {
 
     private val _rawSilkLowStock = MutableStateFlow<LowStockItemDto?>(null)
     val rawSilkLowStock: StateFlow<LowStockItemDto?> = _rawSilkLowStock.asStateFlow()
+
+    private val _aiParsedFields = MutableStateFlow<Map<String, String>?>(null)
+    val aiParsedFields: StateFlow<Map<String, String>?> = _aiParsedFields.asStateFlow()
+
+    private val _aiBusy = MutableStateFlow(false)
+    val aiBusy: StateFlow<Boolean> = _aiBusy.asStateFlow()
+
+    private val _aiError = MutableStateFlow<String?>(null)
+    val aiError: StateFlow<String?> = _aiError.asStateFlow()
 
     init {
         if (inventory != null) {
@@ -70,6 +81,62 @@ class PurchaseFormViewModel(
 
     /** Cash purchases have no credit: days are forced to 0 and the field is disabled (FR-PROC-04). */
     fun setPaymentType(type: String) = edit { it.copy(paymentType = type, creditDays = if (type == "CASH") "0" else "") }
+
+    /** Post-MVP Voice & AI: Parse unstructured text or speech transcript into bill fields. */
+    fun parseSmartFill(text: String) {
+        if (text.isBlank()) return
+        val docRepo = documents ?: return
+        _aiBusy.value = true
+        _aiError.value = null
+        viewModelScope.launch {
+            when (val res = docRepo.parseText(text)) {
+                is ApiResult.Success -> {
+                    val map = res.value.suggested.mapValues { it.value.jsonPrimitive.content }
+                    _aiParsedFields.value = map
+                    _aiBusy.value = false
+                }
+                is ApiResult.Failure -> {
+                    _aiError.value = res.error.detail ?: res.error.code
+                    _aiBusy.value = false
+                }
+            }
+        }
+    }
+
+    fun clearSmartFill() {
+        _aiParsedFields.value = null
+        _aiError.value = null
+    }
+
+    /** Apply extracted fields to the purchase form with user review. */
+    fun applySmartFill(fields: Map<String, String>) {
+        val weight = fields["orderedWeightKg"]
+        val rate = fields["ratePerKg"]
+        val billNo = fields["billNumber"]
+        val pType = fields["paymentType"]
+        val prod = fields["productType"]
+        val creditD = fields["creditDays"]
+        val supplierName = fields["supplierName"]
+
+        edit { current ->
+            var updated = current
+            if (!weight.isNullOrBlank()) updated = updated.copy(orderedWeightKg = weight)
+            if (!rate.isNullOrBlank()) updated = updated.copy(ratePerKg = rate)
+            if (!billNo.isNullOrBlank()) updated = updated.copy(billReference = billNo)
+            if (!pType.isNullOrBlank()) updated = updated.copy(paymentType = pType)
+            if (!prod.isNullOrBlank()) updated = updated.copy(productType = prod)
+            if (!creditD.isNullOrBlank()) updated = updated.copy(creditDays = creditD)
+            updated
+        }
+
+        if (!supplierName.isNullOrBlank()) {
+            viewModelScope.launch {
+                val matches = parties.pick(supplierName, "SUPPLIER").getOrNull()
+                matches?.firstOrNull()?.let { pickSupplier(it) }
+            }
+        }
+        clearSmartFill()
+    }
 
     override fun validate(form: PurchaseForm): Map<String, String> = Checks.collect(
         "supplierId" to if (form.supplier == null) s("validation.required") else null,

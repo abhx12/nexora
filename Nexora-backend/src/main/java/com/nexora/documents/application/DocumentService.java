@@ -20,6 +20,7 @@ import com.nexora.documents.api.dto.DocumentOcrRequest;
 import com.nexora.documents.api.dto.DocumentResponse;
 import com.nexora.documents.api.dto.DocumentShareRequest;
 import com.nexora.documents.api.dto.OcrExtractionResponse;
+import com.nexora.documents.api.dto.TextParseRequest;
 import com.nexora.documents.domain.Document;
 import com.nexora.documents.domain.DocumentReferenceType;
 import com.nexora.documents.domain.DocumentType;
@@ -159,6 +160,13 @@ public class DocumentService {
         Map<String, Object> suggested = BillOcrExtractor.extract(content, d.getFileName());
         log.info("event=bill_ocr_extracted documentId={} fieldsCount={}", d.getId(), suggested.size());
         return new OcrExtractionResponse(d.getId(), suggested);
+    }
+
+    // Post-MVP Voice & AI: Parse unstructured text or speech transcripts into suggested silk purchase fields.
+    public OcrExtractionResponse parseText(TextParseRequest request) {
+        Map<String, Object> suggested = BillOcrExtractor.extractFromText(request.text());
+        log.info("event=bill_text_parsed textLength={} fieldsCount={}", request.text().length(), suggested.size());
+        return new OcrExtractionResponse(null, suggested);
     }
 
     // FR-DOC-02: the type comes from the bytes, never from the client's header or file name.

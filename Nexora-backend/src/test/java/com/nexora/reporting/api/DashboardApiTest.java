@@ -135,6 +135,22 @@ class DashboardApiTest extends AbstractApiTest {
                 .andExpect(jsonPath("$.supplierPayables").value(300000.00));
     }
 
+    @Test
+    @DisplayName("AI Advisory returns health status, liquidity coverage, runway, and bilingual insights")
+    void aiAdvisory_returnsHealthStatusAndInsights() throws Exception {
+        asOwner(get("/api/v1/dashboard/ai-advisory")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.healthStatus").isNotEmpty())
+                .andExpect(jsonPath("$.liquidityCoverageRatio").isNumber())
+                .andExpect(jsonPath("$.insights").isArray())
+                .andExpect(jsonPath("$.insights[0].titleEn").isNotEmpty())
+                .andExpect(jsonPath("$.insights[0].titleTa").isNotEmpty());
+
+        mockMvc.perform(get("/api/v1/dashboard/ai-advisory")
+                .header(HttpHeaders.AUTHORIZATION, AuthTokens.bearer(tokens.staff())))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+    }
+
     // A credit purchase with its own credit days, fully received and accepted; returns its id.
     private String receivedPurchase(String supplier, LocalDate date, int creditDays, String kg, String rate)
             throws Exception {

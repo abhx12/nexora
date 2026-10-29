@@ -71,6 +71,21 @@ fun OrderDetailScreen(nav: NavigationViewModel, orderId: String, reloadTick: Int
                         else -> Button(onClick = { vm.ask(a.name) }) { Text(label) }
                     }
                 }
+                OutlinedButton(onClick = {
+                    val firstItem = o.items.firstOrNull()
+                    val product = firstItem?.productType ?: "Silk Warp"
+                    val weight = firstItem?.requiredWeightKg?.toString() ?: "0"
+                    val msg = com.nexora.desktop.util.WhatsAppHelper.formatSalesBillMessage(
+                        customerName = o.customer.name,
+                        orderNumber = o.orderNumber,
+                        product = product,
+                        weightKg = weight,
+                        totalAmount = o.totalAmount.toString(),
+                    )
+                    com.nexora.desktop.util.WhatsAppHelper.openChat(null, msg)
+                }) {
+                    Text("💬 " + s("whatsapp.shareBill"))
+                }
                 if (nav.can("DOCUMENT_MANAGE")) OutlinedButton(onClick = { nav.show(Overlay.AttachDocument("ORDER", o.id)) }) { Text(s("document.attach")) }
             }
         }

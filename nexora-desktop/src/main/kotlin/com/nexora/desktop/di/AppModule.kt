@@ -130,6 +130,7 @@ val repositoryModule = module {
     single { AuthRepository(get(), get(), get()) }
     single { PartyRepository(get()) }
     single { SystemSettingRepository(get()) }
+    single { com.nexora.desktop.repository.UserRepository(get()) }
 }
 
 val viewModelModule = module {
@@ -140,7 +141,7 @@ val viewModelModule = module {
     factory { SessionViewModel(get(), get(), get(), get()) }
     factory { NavigationViewModel(get()) }
     factory { OfflineStateViewModel(get()) }
-    factory { SettingsViewModel(get(), get(), get(), get()) }
+    factory { SettingsViewModel(get(), get(), get(), get(), get()) }
     factory { p -> DocumentListViewModel(get(), get(), p.getOrNull<Map<String, String>>() ?: emptyMap()) }
     factory { p -> AttachDocumentViewModel(get(), p.values.getOrNull(0) as String?, p.values.getOrNull(1) as String?) }
     factory { ReminderSettingsViewModel(get()) }
@@ -186,7 +187,7 @@ val viewModelModule = module {
     factory { p -> ReturnDialogViewModel(get(), get(), p.get()) }
     factory { p -> ReceiveSilkViewModel(get(), get(), p.get()) }
     factory { p -> PurchaseDetailViewModel(get(), get(), p.get()) }
-    factory { PurchaseFormViewModel(get(), get(), get(), get()) }
+    factory { PurchaseFormViewModel(get(), get(), get(), get(), get()) }
     factory { InventoryViewModel(get(), get()) }
     factory { p -> PurchaseListViewModel(get(), get(), p.getOrNull<Map<String, String>>() ?: emptyMap()) }
     factory { p -> PartyDetailViewModel(get(), get(), get(), p.get()) }

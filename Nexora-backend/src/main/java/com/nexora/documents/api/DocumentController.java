@@ -26,6 +26,7 @@ import com.nexora.documents.api.dto.DocumentOcrRequest;
 import com.nexora.documents.api.dto.DocumentResponse;
 import com.nexora.documents.api.dto.DocumentShareRequest;
 import com.nexora.documents.api.dto.OcrExtractionResponse;
+import com.nexora.documents.api.dto.TextParseRequest;
 import com.nexora.documents.application.DocumentContent;
 import com.nexora.documents.application.DocumentService;
 import com.nexora.documents.domain.DocumentReferenceType;
@@ -102,5 +103,12 @@ class DocumentController {
     @PreAuthorize("hasAuthority('DOCUMENT_MANAGE')")
     OcrExtractionResponse ocrExtractions(@Valid @RequestBody DocumentOcrRequest request) {
         return documents.extractOcr(request);
+    }
+
+    // Post-MVP Voice & AI: Parse unstructured text into suggested silk purchase fields
+    @PostMapping("/parse-text")
+    @PreAuthorize("hasAuthority('PURCHASE_CREATE')")
+    OcrExtractionResponse parseText(@Valid @RequestBody TextParseRequest request) {
+        return documents.parseText(request);
     }
 }

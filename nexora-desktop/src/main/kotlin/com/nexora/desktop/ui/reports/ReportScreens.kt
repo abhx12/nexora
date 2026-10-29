@@ -87,6 +87,8 @@ val REPORT_METAS = mapOf(
     "cash-bank" to ReportMeta(ReportCategory.FINANCIAL, "🏦", "TREASURY", listOf("Opening & closing bank/cash", "Receipts & payments by type", "Per-account ledger audit")),
     "loans-and-chits" to ReportMeta(ReportCategory.FINANCIAL, "🪙", "CREDIT", listOf("Loan principal & outstanding", "Interest paid schedules", "Chit monthly tallies & payouts")),
     "expenses" to ReportMeta(ReportCategory.FINANCIAL, "🧾", "EXPENSES", listOf("Categorized business expenses", "Monthly spending trends", "Owner personal drawings")),
+    "profit-and-loss" to ReportMeta(ReportCategory.FINANCIAL, "📊", "P&L", listOf("Delivered sales revenue", "Operating & interest costs", "Net operating profit")),
+    "profitability" to ReportMeta(ReportCategory.FINANCIAL, "📈", "MARGINS", listOf("Product profit margins", "Customer profitability", "Weaving unit return analysis")),
 
     // Sales & Customers
     "customer-outstanding" to ReportMeta(ReportCategory.SALES, "👥", "AGING", listOf("Customer receivables", "Advance balances held", "Oldest overdue aging (days)")),
@@ -103,6 +105,7 @@ val REPORT_METAS = mapOf(
     "wastage" to ReportMeta(ReportCategory.OPERATIONS, "♻️", "WASTAGE", listOf("Wastage source breakdown", "Monthly yarn loss analysis", "Shop floor discrepancy audit")),
     "outsourcing" to ReportMeta(ReportCategory.OPERATIONS, "🔄", "SUBCONTRACT", listOf("Silk issued to weavers", "Returned yarn from units", "Outside stock & job balances")),
     "worker-payable" to ReportMeta(ReportCategory.OPERATIONS, "🔨", "PAYROLL", listOf("Weekly piece-rate labor", "Earned vs disbursed wages", "Pending worker balances")),
+    "worker-efficiency" to ReportMeta(ReportCategory.OPERATIONS, "⚡", "PRODUCTIVITY", listOf("Rolling & warping hourly output", "Kg produced per shift", "Workforce wage efficiency")),
 )
 
 /** S-RPT-01 Reports home: executive analytics hub with category filters & report cards. */

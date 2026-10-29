@@ -161,7 +161,20 @@ private fun OutstandingTab(nav: NavigationViewModel, vm: PartyDetailViewModel, p
             LabeledValue(s("party.ageOver90"), money(o.ageing.over90))
             o.creditDays?.let { LabeledValue(s("party.customerCreditDays"), it.toString()) }
         }
-        PayButton(nav, party, "CUSTOMER")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PayButton(nav, party, "CUSTOMER")
+            OutlinedButton(onClick = {
+                val phone = party.phones.firstOrNull()?.phoneNumber
+                val msg = com.nexora.desktop.util.WhatsAppHelper.formatCustomerStatementMessage(
+                    customerName = party.name,
+                    outstanding = money(o.totalOutstanding).removePrefix("₹"),
+                    advance = money(o.advance),
+                )
+                com.nexora.desktop.util.WhatsAppHelper.openChat(phone, msg)
+            }) {
+                Text("💬 " + s("whatsapp.shareStatement"))
+            }
+        }
         StaticTable(
             listOf(s("order.number"), s("common.date"), s("common.status"), s("common.amount"), s("common.allocated"), s("common.outstanding"), s("party.ageDays"), s("order.dueDate"), s("order.overdue")),
             o.orders.map {

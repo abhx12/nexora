@@ -267,6 +267,21 @@ class DocumentApiTest extends AbstractApiTest {
                 .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
     }
 
+    @Test
+    void parseText_tamilTranscript_extractsSuggestedFields() throws Exception {
+        String payload = "{\"text\":\"ஸ்ரீ பாலாஜி சில்க்ஸ் 25.500 கிலோ ரேட் 4500 பில் எண் 88 கடன் 15 நாட்கள்\"}";
+
+        asOwner(postJson("/api/v1/documents/parse-text", payload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.suggested.supplierName").value("ஸ்ரீ பாலாஜி சில்க்ஸ்"))
+                .andExpect(jsonPath("$.suggested.orderedWeightKg").value(25.500))
+                .andExpect(jsonPath("$.suggested.ratePerKg").value(4500.00))
+                .andExpect(jsonPath("$.suggested.billNumber").value("88"))
+                .andExpect(jsonPath("$.suggested.paymentType").value("CREDIT"))
+                .andExpect(jsonPath("$.suggested.creditDays").value(15))
+                .andExpect(jsonPath("$.suggested.grossAmount").value(114750.00));
+    }
+
     private static long storedFiles() throws Exception {
         try (var files = Files.list(DOCUMENTS_DIR)) {
             return files.count();

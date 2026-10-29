@@ -1,10 +1,13 @@
 package com.nexora.desktop.ui.purchases
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -12,8 +15,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nexora.desktop.ui.components.DateField
 import com.nexora.desktop.ui.components.FlagChip
@@ -38,6 +45,11 @@ fun NewPurchasePanel(nav: NavigationViewModel) {
     val form by vm.form.collectAsState()
     val status by vm.status.collectAsState()
     val rawSilkAlert by vm.rawSilkLowStock.collectAsState()
+    val aiBusy by vm.aiBusy.collectAsState()
+    val aiError by vm.aiError.collectAsState()
+    val aiParsed by vm.aiParsedFields.collectAsState()
+    var showSmartFill by remember { mutableStateOf(false) }
+
     val errors = status.fieldErrors
     LaunchedEffect(status.result) {
         status.result?.let {
@@ -45,6 +57,24 @@ fun NewPurchasePanel(nav: NavigationViewModel) {
             nav.push(Screen.PurchaseDetail(it.id))
         }
     }
+
+    if (showSmartFill) {
+        SmartFillDialog(
+            busy = aiBusy,
+            error = aiError,
+            parsedFields = aiParsed,
+            onParse = vm::parseSmartFill,
+            onApply = {
+                vm.applySmartFill(it)
+                showSmartFill = false
+            },
+            onDismiss = {
+                vm.clearSmartFill()
+                showSmartFill = false
+            },
+        )
+    }
+
     FormPanel(
         title = s("purchase.new"),
         saveLabel = s("common.save"),
@@ -55,6 +85,39 @@ fun NewPurchasePanel(nav: NavigationViewModel) {
         onCancel = nav::closeOverlay,
         footerNote = s("purchase.calculatedOnSave"),
     ) {
+        // Post-MVP AI Smart Fill launcher
+        Surface(
+            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        ) {
+            Row(
+                Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(Modifier.weight(1f).padding(end = 8.dp)) {
+                    Text(
+                        s("ai.smartFill.bannerTitle"),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(
+                        s("ai.smartFill.bannerSubtitle"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Button(
+                    onClick = { showSmartFill = true },
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Text(s("ai.smartFill.launchButton"))
+                }
+            }
+        }
         val alert = rawSilkAlert
         if (form.productType == "RAW_SILK" && alert != null) {
             Surface(

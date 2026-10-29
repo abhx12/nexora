@@ -47,4 +47,7 @@ class DocumentRepository(private val api: ApiClient) {
 
     suspend fun extractOcr(documentId: String): ApiResult<com.nexora.desktop.api.dto.OcrExtractionResponse> =
         api.post("/documents/ocr-extractions", com.nexora.desktop.api.dto.DocumentOcrRequest(documentId))
+
+    suspend fun parseText(text: String): ApiResult<com.nexora.desktop.api.dto.OcrExtractionResponse> =
+        api.post("/documents/parse-text", com.nexora.desktop.api.dto.TextParseRequest(text))
 }
