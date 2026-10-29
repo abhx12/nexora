@@ -136,6 +136,32 @@ public class AuthService {
                 user.getLastLoginAt());
     }
 
+    @Transactional
+    public void changePassword(UUID userId, com.nexora.identity.api.dto.ChangePasswordRequest request) {
+        Instant now = clock.instant();
+        User user = users.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User", userId));
+
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
+            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS, "Current password does not match.");
+        }
+
+        String newPassword = request.newPassword();
+        int bytes = newPassword.getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
+        boolean hasLetter = newPassword.chars().anyMatch(Character::isLetter);
+        boolean hasDigit = newPassword.chars().anyMatch(Character::isDigit);
+        if (bytes < 12 || bytes > 72 || !hasLetter || !hasDigit || newPassword.equalsIgnoreCase(user.getUsername())) {
+            throw new BusinessException(ErrorCode.MALFORMED_REQUEST,
+                    "New password must be 12-72 characters long, contain at least one letter and one number, and not match the username");
+        }
+        if (passwordEncoder.matches(newPassword, user.getPasswordHash())) {
+            throw new BusinessException(ErrorCode.MALFORMED_REQUEST, "New password cannot be the same as the current password");
+        }
+
+        user.changePassword(passwordEncoder.encode(newPassword));
+        refreshTokens.revokeAllActive(userId, now);
+        log.info("event=password_changed userId={}", userId);
+    }
+
     // A new access token plus a new refresh token (stored as a hash only).
     private TokenResponse issueTokens(User user, Instant now) {
         String accessToken = accessTokens.issue(user.getId(), user.getUsername(),

@@ -136,4 +136,16 @@ public class User extends AuditableEntity {
     public Set<Role> getRoles() {
         return Set.copyOf(roles);
     }
+
+    public void changePassword(String newPasswordHash) {
+        this.passwordHash = newPasswordHash;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName;
+    }
 }

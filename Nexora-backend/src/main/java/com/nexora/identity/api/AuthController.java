@@ -53,4 +53,11 @@ class AuthController {
     void logout(@Valid @RequestBody RefreshRequest request) {
         authService.logout(request);
     }
+
+    @PostMapping("/password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("isAuthenticated()")
+    void changePassword(@Valid @RequestBody com.nexora.identity.api.dto.ChangePasswordRequest request) {
+        authService.changePassword(CurrentUser.id(), request);
+    }
 }

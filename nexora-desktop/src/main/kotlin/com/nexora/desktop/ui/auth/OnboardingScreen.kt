@@ -40,7 +40,7 @@ fun OnboardingScreen(viewModel: OnboardingViewModel, onCompleted: () -> Unit, on
 
             OutlinedTextField(
                 value = state.businessName,
-                onValueChange = viewModel::onBusinessNameChange,
+                onValueChange = { viewModel.onBusinessNameChange(it.take(120)) },
                 label = { Text("Business Name") },
                 placeholder = { Text("e.g. Sri Balaji Silk Traders") },
                 singleLine = true,
@@ -50,7 +50,7 @@ fun OnboardingScreen(viewModel: OnboardingViewModel, onCompleted: () -> Unit, on
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
                     value = state.city,
-                    onValueChange = viewModel::onCityChange,
+                    onValueChange = { viewModel.onCityChange(it.take(100)) },
                     label = { Text("City") },
                     placeholder = { Text("e.g. Kanchipuram") },
                     singleLine = true,
@@ -58,9 +58,9 @@ fun OnboardingScreen(viewModel: OnboardingViewModel, onCompleted: () -> Unit, on
                 )
                 OutlinedTextField(
                     value = state.phone,
-                    onValueChange = viewModel::onPhoneChange,
+                    onValueChange = { com.nexora.desktop.ui.components.acceptPhoneInput(it)?.let(viewModel::onPhoneChange) },
                     label = { Text("Phone Number") },
-                    placeholder = { Text("e.g. +91 98401 23456") },
+                    placeholder = { Text("10 digits (e.g. 9840123456)") },
                     singleLine = true,
                     modifier = Modifier.weight(1f)
                 )
@@ -68,7 +68,7 @@ fun OnboardingScreen(viewModel: OnboardingViewModel, onCompleted: () -> Unit, on
 
             OutlinedTextField(
                 value = state.username,
-                onValueChange = viewModel::onUsernameChange,
+                onValueChange = { viewModel.onUsernameChange(it.take(50).filter { c -> c.isLetterOrDigit() || c == '_' }) },
                 label = { Text("Administrator Username") },
                 placeholder = { Text("e.g. owner") },
                 singleLine = true,
@@ -77,7 +77,7 @@ fun OnboardingScreen(viewModel: OnboardingViewModel, onCompleted: () -> Unit, on
 
             OutlinedTextField(
                 value = state.password,
-                onValueChange = viewModel::onPasswordChange,
+                onValueChange = { viewModel.onPasswordChange(it.take(72)) },
                 label = { Text("Password (at least 8 chars, letter & number)") },
                 visualTransformation = PasswordVisualTransformation(),
                 singleLine = true,
@@ -86,7 +86,7 @@ fun OnboardingScreen(viewModel: OnboardingViewModel, onCompleted: () -> Unit, on
 
             OutlinedTextField(
                 value = state.confirmPassword,
-                onValueChange = viewModel::onConfirmPasswordChange,
+                onValueChange = { viewModel.onConfirmPasswordChange(it.take(72)) },
                 label = { Text("Confirm Password") },
                 visualTransformation = PasswordVisualTransformation(),
                 singleLine = true,

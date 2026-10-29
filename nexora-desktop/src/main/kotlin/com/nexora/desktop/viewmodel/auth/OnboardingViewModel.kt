@@ -57,6 +57,19 @@ class OnboardingViewModel(
             _state.update { it.copy(error = "Business name is required") }
             return
         }
+        if (s.phone.isNotBlank()) {
+            val trimmed = s.phone.trim()
+            val isValid = if (trimmed.startsWith("+")) {
+                val rest = trimmed.substring(1)
+                rest.all { it.isDigit() } && rest.length in 10..12
+            } else {
+                trimmed.all { it.isDigit() } && trimmed.length == 10
+            }
+            if (!isValid) {
+                _state.update { it.copy(error = "Enter a valid 10-digit mobile number (entered: '${s.phone}')") }
+                return
+            }
+        }
 
         viewModelScope.launch {
             _state.update { it.copy(submitting = true, error = null) }

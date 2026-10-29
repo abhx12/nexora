@@ -65,6 +65,261 @@ fun SettingsScreen(nav: NavigationViewModel) {
             )
         }
 
+        // Account & Security Section (Change Password)
+        val currentUser = nav.state.collectAsState().value.user
+        var showChangePassword by remember { mutableStateOf(false) }
+        var currentPassword by remember { mutableStateOf("") }
+        var newPassword by remember { mutableStateOf("") }
+        var confirmNewPassword by remember { mutableStateOf("") }
+        var passwordMsg by remember { mutableStateOf<String?>(null) }
+        var passwordSuccess by remember { mutableStateOf<Boolean?>(null) }
+        var isChangingPassword by remember { mutableStateOf(false) }
+
+        Section("Account & Security") {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (currentUser != null) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                        LabeledValue("Logged In User", currentUser.displayName)
+                        LabeledValue("Username", currentUser.username)
+                        LabeledValue("Assigned Roles", currentUser.roles.joinToString(", "))
+                    }
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedButton(onClick = {
+                        showChangePassword = !showChangePassword
+                        passwordMsg = null
+                    }) {
+                        Text(if (showChangePassword) "Cancel Change Password" else "Change Password")
+                    }
+                }
+
+                if (showChangePassword) {
+                    Column(
+                        modifier = Modifier.padding(top = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            OutlinedTextField(
+                                value = currentPassword,
+                                onValueChange = { currentPassword = it.take(72) },
+                                label = { Text("Current Password") },
+                                visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                                modifier = Modifier.width(220.dp),
+                            )
+                            OutlinedTextField(
+                                value = newPassword,
+                                onValueChange = { newPassword = it.take(72) },
+                                label = { Text("New Password (min 12 chars)") },
+                                visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                                modifier = Modifier.width(250.dp),
+                            )
+                            OutlinedTextField(
+                                value = confirmNewPassword,
+                                onValueChange = { confirmNewPassword = it.take(72) },
+                                label = { Text("Confirm New Password") },
+                                visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                                modifier = Modifier.width(220.dp),
+                            )
+                        }
+
+                        Button(
+                            onClick = {
+                                if (currentPassword.isBlank()) {
+                                    passwordMsg = "Please enter your current password."
+                                    passwordSuccess = false
+                                    return@Button
+                                }
+                                if (newPassword.length < 12 || !newPassword.any { it.isLetter() } || !newPassword.any { it.isDigit() }) {
+                                    passwordMsg = "New password must be at least 12 characters and contain both letters and digits."
+                                    passwordSuccess = false
+                                    return@Button
+                                }
+                                if (newPassword != confirmNewPassword) {
+                                    passwordMsg = "New passwords do not match."
+                                    passwordSuccess = false
+                                    return@Button
+                                }
+                                isChangingPassword = true
+                                vm.changePassword(currentPassword, newPassword) { ok, msg ->
+                                    isChangingPassword = false
+                                    passwordSuccess = ok
+                                    passwordMsg = msg
+                                    if (ok) {
+                                        currentPassword = ""
+                                        newPassword = ""
+                                        confirmNewPassword = ""
+                                    }
+                                }
+                            },
+                            enabled = !isChangingPassword,
+                            modifier = Modifier.padding(top = 4.dp)
+                        ) {
+                            Text(if (isChangingPassword) "Updating Password..." else "Update Password")
+                        }
+
+                        passwordMsg?.let { msg ->
+                            Text(
+                                msg,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (passwordSuccess == true) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // User Management Section (Owner Only)
+        if (nav.can("USER_MANAGE")) {
+            val userList by vm.users.collectAsState()
+            val userLoading by vm.userOpLoading.collectAsState()
+            var showAddUser by remember { mutableStateOf(false) }
+            var newUsername by remember { mutableStateOf("") }
+            var newDisplayName by remember { mutableStateOf("") }
+            var newAccountPassword by remember { mutableStateOf("") }
+            var newRole by remember { mutableStateOf("STAFF") }
+            var userActionMsg by remember { mutableStateOf<String?>(null) }
+            var userActionSuccess by remember { mutableStateOf<Boolean?>(null) }
+
+            Section("User Management (Team & Staff)") {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            "Manage accounts, access permissions, and staff credentials.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        OutlinedButton(onClick = {
+                            showAddUser = !showAddUser
+                            userActionMsg = null
+                        }) {
+                            Text(if (showAddUser) "Cancel" else "+ Add New User")
+                        }
+                    }
+
+                    if (showAddUser) {
+                        Column(
+                            modifier = Modifier.padding(vertical = 4.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text("Create New Account", style = MaterialTheme.typography.titleSmall)
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                OutlinedTextField(
+                                    value = newUsername,
+                                    onValueChange = { newUsername = it.lowercase().take(50) },
+                                    label = { Text("Username") },
+                                    placeholder = { Text("e.g. clerk1") },
+                                    modifier = Modifier.width(180.dp),
+                                )
+                                OutlinedTextField(
+                                    value = newDisplayName,
+                                    onValueChange = { newDisplayName = it.take(100) },
+                                    label = { Text("Display Name") },
+                                    placeholder = { Text("e.g. Ramesh Kumar") },
+                                    modifier = Modifier.width(220.dp),
+                                )
+                                OutlinedTextField(
+                                    value = newAccountPassword,
+                                    onValueChange = { newAccountPassword = it.take(72) },
+                                    label = { Text("Temporary Password (min 12)") },
+                                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                                    modifier = Modifier.width(220.dp),
+                                )
+                                Dropdown(
+                                    "Role",
+                                    listOf("STAFF" to "Staff (Read-Only)", "OWNER" to "Owner (Full Admin)"),
+                                    newRole,
+                                    { newRole = it },
+                                    Modifier.width(200.dp)
+                                )
+                            }
+                            Button(
+                                onClick = {
+                                    if (newUsername.isBlank() || newDisplayName.isBlank()) {
+                                        userActionMsg = "Username and display name are required."
+                                        userActionSuccess = false
+                                        return@Button
+                                    }
+                                    if (newAccountPassword.length < 12 || !newAccountPassword.any { it.isLetter() } || !newAccountPassword.any { it.isDigit() }) {
+                                        userActionMsg = "Password must be at least 12 characters and contain letters and numbers."
+                                        userActionSuccess = false
+                                        return@Button
+                                    }
+                                    vm.createUser(newUsername, newDisplayName, newAccountPassword, newRole) { ok, msg ->
+                                        userActionSuccess = ok
+                                        userActionMsg = msg
+                                        if (ok) {
+                                            newUsername = ""
+                                            newDisplayName = ""
+                                            newAccountPassword = ""
+                                            showAddUser = false
+                                        }
+                                    }
+                                },
+                                enabled = !userLoading,
+                                modifier = Modifier.padding(top = 4.dp)
+                            ) {
+                                Text(if (userLoading) "Creating..." else "Create Account")
+                            }
+                        }
+                    }
+
+                    userActionMsg?.let { msg ->
+                        Text(
+                            msg,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (userActionSuccess == true) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                        )
+                    }
+
+                    // Existing Users List
+                    Text("Existing Users (${userList.size})", style = MaterialTheme.typography.titleSmall)
+                    userList.forEach { user ->
+                        val isSelf = currentUser?.id == user.id
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Text(user.displayName, style = MaterialTheme.typography.bodyMedium)
+                                    Text("(@${user.username})", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    if (isSelf) {
+                                        Text("(You)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
+                                Text(
+                                    "Role: ${user.roles.joinToString(", ")} • Status: ${if (user.active) "Active" else "Deactivated"}${user.lastLoginAt?.let { " • Last login: $it" } ?: ""}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            if (!isSelf) {
+                                OutlinedButton(
+                                    onClick = {
+                                        vm.setUserStatus(user.id, !user.active) { ok, msg ->
+                                            userActionSuccess = ok
+                                            userActionMsg = msg
+                                        }
+                                    }
+                                ) {
+                                    Text(if (user.active) "Deactivate" else "Activate")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Business Profile Section
         val biz = sysSettings["BUSINESS"] ?: emptyMap()
         var bizName by remember(biz["name"]) { mutableStateOf(biz["name"] ?: "") }
@@ -76,29 +331,31 @@ fun SettingsScreen(nav: NavigationViewModel) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = bizName,
-                    onValueChange = { bizName = it },
+                    onValueChange = { bizName = it.take(120) },
                     label = { Text("Business Name") },
                     modifier = Modifier.width(260.dp),
                     enabled = nav.can("FINANCE_MANAGE")
                 )
                 OutlinedTextField(
                     value = bizCity,
-                    onValueChange = { bizCity = it },
+                    onValueChange = { bizCity = it.take(100) },
                     label = { Text("City") },
                     modifier = Modifier.width(200.dp),
                     enabled = nav.can("FINANCE_MANAGE")
                 )
                 OutlinedTextField(
                     value = bizPhone,
-                    onValueChange = { bizPhone = it },
+                    onValueChange = { com.nexora.desktop.ui.components.acceptPhoneInput(it)?.let { clean -> bizPhone = clean } },
                     label = { Text("Phone") },
+                    placeholder = { Text("10 digits (e.g. 9840123456)") },
                     modifier = Modifier.width(200.dp),
                     enabled = nav.can("FINANCE_MANAGE")
                 )
                 OutlinedTextField(
                     value = bizGstin,
-                    onValueChange = { bizGstin = it },
+                    onValueChange = { com.nexora.desktop.ui.components.acceptGstinInput(it)?.let { clean -> bizGstin = clean } },
                     label = { Text("GSTIN") },
+                    placeholder = { Text("15 alphanumeric") },
                     modifier = Modifier.width(220.dp),
                     enabled = nav.can("FINANCE_MANAGE")
                 )
@@ -106,9 +363,26 @@ fun SettingsScreen(nav: NavigationViewModel) {
             if (nav.can("FINANCE_MANAGE")) {
                 Button(
                     onClick = {
+                        if (bizPhone.isNotBlank()) {
+                            val trimmed = bizPhone.trim()
+                            val isValid = if (trimmed.startsWith("+")) {
+                                val rest = trimmed.substring(1)
+                                rest.all { it.isDigit() } && rest.length in 10..12
+                            } else {
+                                trimmed.all { it.isDigit() } && trimmed.length == 10
+                            }
+                            if (!isValid) {
+                                vm.setStatusMessage("Invalid phone number '${bizPhone}'. Please enter a valid 10-digit mobile number.")
+                                return@Button
+                            }
+                        }
+                        if (bizGstin.isNotBlank() && bizGstin.trim().length != 15) {
+                            vm.setStatusMessage("Invalid GSTIN '${bizGstin}'. GSTIN must be exactly 15 alphanumeric characters (e.g. 33AAAAA0000A1Z5).")
+                            return@Button
+                        }
                         vm.updateSystemCategory(
                             "BUSINESS",
-                            mapOf("name" to bizName, "city" to bizCity, "phone" to bizPhone, "gstin" to bizGstin)
+                            mapOf("name" to bizName.trim(), "city" to bizCity.trim(), "phone" to bizPhone.trim(), "gstin" to bizGstin.trim())
                         )
                     },
                     modifier = Modifier.padding(top = 8.dp)
@@ -185,7 +459,7 @@ fun SettingsScreen(nav: NavigationViewModel) {
                             )
                             OutlinedTextField(
                                 value = cloudVaultKey,
-                                onValueChange = { cloudVaultKey = it },
+                                onValueChange = { cloudVaultKey = it.take(255) },
                                 label = { Text("Cloud Vault Key / License") },
                                 modifier = Modifier.width(360.dp),
                                 enabled = nav.can("FINANCE_MANAGE"),
@@ -202,35 +476,35 @@ fun SettingsScreen(nav: NavigationViewModel) {
                             FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 OutlinedTextField(
                                     value = s3Endpoint,
-                                    onValueChange = { s3Endpoint = it },
+                                    onValueChange = { s3Endpoint = it.take(255) },
                                     label = { Text("Endpoint URL (e.g. https://s3.ap-south-1.amazonaws.com)") },
                                     modifier = Modifier.width(380.dp),
                                     enabled = nav.can("FINANCE_MANAGE"),
                                 )
                                 OutlinedTextField(
                                     value = s3Bucket,
-                                    onValueChange = { s3Bucket = it },
+                                    onValueChange = { s3Bucket = it.take(100) },
                                     label = { Text("Bucket Name") },
                                     modifier = Modifier.width(220.dp),
                                     enabled = nav.can("FINANCE_MANAGE"),
                                 )
                                 OutlinedTextField(
                                     value = s3Region,
-                                    onValueChange = { s3Region = it },
+                                    onValueChange = { s3Region = it.take(50) },
                                     label = { Text("Region") },
                                     modifier = Modifier.width(160.dp),
                                     enabled = nav.can("FINANCE_MANAGE"),
                                 )
                                 OutlinedTextField(
                                     value = s3AccessKey,
-                                    onValueChange = { s3AccessKey = it },
+                                    onValueChange = { s3AccessKey = it.take(128) },
                                     label = { Text("Access Key ID") },
                                     modifier = Modifier.width(220.dp),
                                     enabled = nav.can("FINANCE_MANAGE"),
                                 )
                                 OutlinedTextField(
                                     value = s3SecretKey,
-                                    onValueChange = { s3SecretKey = it },
+                                    onValueChange = { s3SecretKey = it.take(256) },
                                     label = { Text("Secret Access Key") },
                                     modifier = Modifier.width(260.dp),
                                     enabled = nav.can("FINANCE_MANAGE"),
@@ -360,13 +634,13 @@ fun SettingsScreen(nav: NavigationViewModel) {
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             OutlinedTextField(
                                 value = waPhoneId,
-                                onValueChange = { waPhoneId = it },
+                                onValueChange = { com.nexora.desktop.ui.components.acceptDigitsInput(it, 30)?.let { clean -> waPhoneId = clean } },
                                 label = { Text("Phone Number ID") },
                                 modifier = Modifier.width(260.dp),
                             )
                             OutlinedTextField(
                                 value = waToken,
-                                onValueChange = { waToken = it },
+                                onValueChange = { waToken = it.take(500) },
                                 label = { Text("Access Token") },
                                 modifier = Modifier.width(320.dp),
                             )
@@ -382,7 +656,7 @@ fun SettingsScreen(nav: NavigationViewModel) {
                     if (aiEnabled) {
                         OutlinedTextField(
                             value = aiKey,
-                            onValueChange = { aiKey = it },
+                            onValueChange = { aiKey = it.take(255) },
                             label = { Text("Gemini API Key") },
                             modifier = Modifier.width(360.dp),
                         )
@@ -398,13 +672,13 @@ fun SettingsScreen(nav: NavigationViewModel) {
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             OutlinedTextField(
                                 value = gstClientId,
-                                onValueChange = { gstClientId = it },
+                                onValueChange = { gstClientId = it.take(100) },
                                 label = { Text("GST Portal Client ID") },
                                 modifier = Modifier.width(260.dp),
                             )
                             OutlinedTextField(
                                 value = gstClientSecret,
-                                onValueChange = { gstClientSecret = it },
+                                onValueChange = { gstClientSecret = it.take(255) },
                                 label = { Text("GST Portal Client Secret") },
                                 modifier = Modifier.width(320.dp),
                             )
@@ -421,19 +695,19 @@ fun SettingsScreen(nav: NavigationViewModel) {
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             OutlinedTextField(
                                 value = bankBaseUrl,
-                                onValueChange = { bankBaseUrl = it },
+                                onValueChange = { bankBaseUrl = it.take(255) },
                                 label = { Text("Bank API Base URL") },
                                 modifier = Modifier.width(280.dp),
                             )
                             OutlinedTextField(
                                 value = bankClientId,
-                                onValueChange = { bankClientId = it },
+                                onValueChange = { bankClientId = it.take(100) },
                                 label = { Text("Bank Client ID") },
                                 modifier = Modifier.width(240.dp),
                             )
                             OutlinedTextField(
                                 value = bankClientSecret,
-                                onValueChange = { bankClientSecret = it },
+                                onValueChange = { bankClientSecret = it.take(255) },
                                 label = { Text("Bank Client Secret") },
                                 modifier = Modifier.width(260.dp),
                             )
@@ -517,6 +791,27 @@ fun SettingsScreen(nav: NavigationViewModel) {
                         vm.setDefault("expense.account", it)
                     }, Modifier.width(240.dp))
                 }
+            }
+        }
+        if (nav.can("INVENTORY_VIEW")) {
+            var showThresholdsDialog by remember { mutableStateOf(false) }
+            Section("Stock & Safety Thresholds") {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Set minimum stock levels (in kg) for raw silk, warps, and finished stock. Low-stock warnings and alerts trigger automatically when balances fall below threshold.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedButton(onClick = { showThresholdsDialog = true }) {
+                        Text("Configure Stock Thresholds...")
+                    }
+                }
+            }
+            if (showThresholdsDialog) {
+                com.nexora.desktop.ui.inventory.InventoryThresholdDialog(
+                    onDone = { showThresholdsDialog = false },
+                    onCancel = { showThresholdsDialog = false }
+                )
             }
         }
         if (nav.can("FINANCE_VIEW")) ReminderSettingsPanel(canEdit = nav.can("FINANCE_MANAGE"))

@@ -27,6 +27,7 @@ class SettingsViewModel(
     private val api: ApiClient,
     finance: FinanceRepository,
     private val systemSettingRepo: SystemSettingRepository,
+    private val userRepo: com.nexora.desktop.repository.UserRepository = com.nexora.desktop.repository.UserRepository(api),
 ) : ViewModel() {
 
     val current: StateFlow<AppSettings> = settings.settings
@@ -43,6 +44,12 @@ class SettingsViewModel(
     private val _settingsStatus = MutableStateFlow<String?>(null)
     val settingsStatus: StateFlow<String?> = _settingsStatus.asStateFlow()
 
+    private val _users = MutableStateFlow<List<com.nexora.desktop.api.dto.UserDto>>(emptyList())
+    val users: StateFlow<List<com.nexora.desktop.api.dto.UserDto>> = _users.asStateFlow()
+
+    private val _userOpLoading = MutableStateFlow(false)
+    val userOpLoading: StateFlow<Boolean> = _userOpLoading.asStateFlow()
+
     init {
         viewModelScope.launch {
             val info = api.get<JsonObject>("/actuator/info").getOrNull()
@@ -52,6 +59,69 @@ class SettingsViewModel(
         }
         viewModelScope.launch { _accounts.value = finance.activeAccounts().getOrNull().orEmpty() }
         loadSystemSettings()
+        loadUsers()
+    }
+
+    fun loadUsers() {
+        viewModelScope.launch {
+            val res = userRepo.getUsers()
+            if (res is ApiResult.Success) {
+                _users.value = res.value
+            }
+        }
+    }
+
+    fun changePassword(current: String, new: String, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            val res = api.post<com.nexora.desktop.api.dto.ChangePasswordRequest, Unit>(
+                "/auth/password",
+                com.nexora.desktop.api.dto.ChangePasswordRequest(current, new)
+            )
+            when (res) {
+                is ApiResult.Success -> {
+                    onResult(true, "Password changed successfully.")
+                }
+                is ApiResult.Failure -> {
+                    val msg = ErrorMessages.detail(res.error) ?: ErrorMessages.message(res.error)
+                    onResult(false, msg)
+                }
+            }
+        }
+    }
+
+    fun createUser(username: String, displayName: String, password: String, role: String, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            _userOpLoading.value = true
+            val res = userRepo.createUser(com.nexora.desktop.api.dto.CreateUserRequest(username.trim(), displayName.trim(), password, role))
+            _userOpLoading.value = false
+            when (res) {
+                is ApiResult.Success -> {
+                    loadUsers()
+                    onResult(true, "User '${res.value.username}' created successfully.")
+                }
+                is ApiResult.Failure -> {
+                    val msg = ErrorMessages.detail(res.error) ?: ErrorMessages.message(res.error)
+                    onResult(false, msg)
+                }
+            }
+        }
+    }
+
+    fun setUserStatus(userId: String, active: Boolean, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            val res = userRepo.setUserStatus(userId, active)
+            when (res) {
+                is ApiResult.Success -> {
+                    loadUsers()
+                    val statusText = if (active) "activated" else "deactivated"
+                    onResult(true, "User '${res.value.username}' $statusText.")
+                }
+                is ApiResult.Failure -> {
+                    val msg = ErrorMessages.detail(res.error) ?: ErrorMessages.message(res.error)
+                    onResult(false, msg)
+                }
+            }
+        }
     }
 
     fun loadSystemSettings() {
@@ -77,6 +147,10 @@ class SettingsViewModel(
                 }
             }
         }
+    }
+
+    fun setStatusMessage(msg: String?) {
+        _settingsStatus.value = msg
     }
 
     fun triggerBackup(onCompleted: (Boolean, String) -> Unit) {

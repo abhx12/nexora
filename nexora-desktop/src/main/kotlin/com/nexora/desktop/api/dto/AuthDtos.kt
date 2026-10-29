@@ -24,3 +24,29 @@ data class MeResponse(
 ) {
     fun can(permission: String): Boolean = permission in permissions
 }
+
+@Serializable
+data class ChangePasswordRequest(val currentPassword: String, val newPassword: String)
+
+@Serializable
+data class UserDto(
+    val id: String,
+    val username: String,
+    val displayName: String,
+    val active: Boolean,
+    val roles: List<String> = emptyList(),
+    val lastLoginAt: String? = null,
+    val createdAt: String? = null,
+)
+
+@Serializable
+data class CreateUserRequest(
+    val username: String,
+    val displayName: String,
+    val password: String,
+    val role: String,
+)
+
+@Serializable
+data class ToggleUserStatusRequest(val active: Boolean)
+

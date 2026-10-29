@@ -187,7 +187,7 @@ fun LoginScreen(
                     // Username field
                     OutlinedTextField(
                         value = state.username,
-                        onValueChange = viewModel::onUsernameChange,
+                        onValueChange = { viewModel.onUsernameChange(it.take(50)) },
                         label = { Text(s("login.username")) },
                         leadingIcon = {
                             UserGlyph(
@@ -209,7 +209,7 @@ fun LoginScreen(
                     // Password field
                     OutlinedTextField(
                         value = state.password,
-                        onValueChange = viewModel::onPasswordChange,
+                        onValueChange = { viewModel.onPasswordChange(it.take(72)) },
                         label = { Text(s("login.password")) },
                         leadingIcon = {
                             LockGlyph(

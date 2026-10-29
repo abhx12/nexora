@@ -208,24 +208,58 @@ class AuthApiTest extends AbstractApiTest {
     }
 
     @Test
-    @DisplayName("FR-AUTH-14 user management endpoints are not exposed in first release")
-    void userManagementEndpoints_areNotExposedInFirstRelease() throws Exception {
+    @DisplayName("FR-AUTH-14 user management allows owner to list and create users")
+    void userManagement_allowsOwnerToListAndCreateUsers() throws Exception {
         String owner = AuthTokens.bearer(tokens.owner());
+        // List users
         mockMvc.perform(get("/api/v1/users").header(HttpHeaders.AUTHORIZATION, owner))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+
+        // Create new user
+        String newUserJson = """
+                {
+                    "username": "newstaff2026",
+                    "displayName": "Staff Member",
+                    "password": "Password12345!",
+                    "role": "STAFF"
+                }
+                """;
         mockMvc.perform(post("/api/v1/users").header(HttpHeaders.AUTHORIZATION, owner)
-                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
-                .andExpect(result -> assertThat(result.getResponse().getStatus()).isIn(404, 405));
+                        .contentType(MediaType.APPLICATION_JSON).content(newUserJson))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.username").value("newstaff2026"))
+                .andExpect(jsonPath("$.displayName").value("Staff Member"))
+                .andExpect(jsonPath("$.roles[0]").value("STAFF"));
     }
 
     @Test
-    @DisplayName("FR-AUTH-15 change password endpoint is not exposed in first release")
-    void changePasswordEndpoint_isNotExposedInFirstRelease() throws Exception {
-        mockMvc.perform(post("/api/v1/auth/password").header(HttpHeaders.AUTHORIZATION, AuthTokens.bearer(tokens.owner()))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"currentPassword\":\"x\",\"newPassword\":\"y\"}"))
-                .andExpect(result -> assertThat(result.getResponse().getStatus()).isIn(404, 405));
+    @DisplayName("FR-AUTH-15 change password allows authenticated user to update password")
+    void changePassword_allowsAuthenticatedUserToUpdatePassword() throws Exception {
+        String username = tokens.createUser("OWNER");
+        String token = tokens.login(username, AuthTokens.TEST_PASSWORD).get("accessToken").asString();
+
+        String body = """
+                {
+                    "currentPassword": "%s",
+                    "newPassword": "BrandNewSecretPassword123!"
+                }
+                """.formatted(AuthTokens.TEST_PASSWORD);
+
+        mockMvc.perform(post("/api/v1/auth/password").header(HttpHeaders.AUTHORIZATION, AuthTokens.bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isNoContent());
+
+        // Login with old password fails
+        mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("username", username, "password", AuthTokens.TEST_PASSWORD))))
+                .andExpect(status().isUnauthorized());
+
+        // Login with new password succeeds
+        mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("username", username, "password", "BrandNewSecretPassword123!"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").isString());
     }
 
     @Test

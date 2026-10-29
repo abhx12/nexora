@@ -46,4 +46,7 @@ class AuthRepository(private val api: ApiClient, private val session: AuthSessio
         }
         session.endSession()
     }
+
+    suspend fun changePassword(current: String, new: String): ApiResult<Unit> =
+        api.post("/auth/password", com.nexora.desktop.api.dto.ChangePasswordRequest(current, new))
 }

@@ -123,7 +123,7 @@ fun ServerSetupScreen(viewModel: ServerSetupViewModel, onContinue: () -> Unit) {
                 } else {
                     OutlinedTextField(
                         value = state.address,
-                        onValueChange = viewModel::onAddressChange,
+                        onValueChange = { viewModel.onAddressChange(it.take(255)) },
                         label = { Text(s("setup.address")) },
                         placeholder = { Text(s("setup.addressExample")) },
                         isError = state.addressError != null,
